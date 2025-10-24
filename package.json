@@ -1,13 +1,23 @@
 {
-  "name": "HR-Lookout",
+  "name": "hr-lookout",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "HR-Lookout: A scalable, production-grade microservice HRIS platform",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "echo 'Use docker-compose up for full dev environment'",
+    "lint": "echo 'Linting not configured yet'",
+    "test": "echo 'Testing not configured yet'"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.19.0"
+  "keywords": [
+    "hr",
+    "hris",
+    "payroll",
+    "microservices"
+  ],
+  "author": "HR-Lookout Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
 }

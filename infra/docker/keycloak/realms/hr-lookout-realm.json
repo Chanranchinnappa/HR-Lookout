@@ -1,0 +1,314 @@
+{
+    "id": "hr-lookout",
+    "realm": "hr-lookout",
+    "displayName": "HR-Lookout",
+    "displayNameHtml": "<div class=\"kc-logo-text\"><span>HR-Lookout</span></div>",
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": true,
+    "editUsernameAllowed": false,
+    "bruteForceProtected": true,
+    "permanentLockout": false,
+    "maxFailureWaitSeconds": 900,
+    "minimumQuickLoginWaitSeconds": 60,
+    "waitIncrementSeconds": 60,
+    "quickLoginCheckMilliSeconds": 1000,
+    "maxDeltaTimeSeconds": 43200,
+    "failureFactor": 5,
+    "defaultSignatureAlgorithm": "RS256",
+    "offlineSessionMaxLifespanEnabled": false,
+    "offlineSessionMaxLifespan": 5184000,
+    "clientSessionIdleTimeout": 0,
+    "clientSessionMaxLifespan": 0,
+    "clientOfflineSessionIdleTimeout": 0,
+    "clientOfflineSessionMaxLifespan": 0,
+    "accessTokenLifespan": 300,
+    "accessTokenLifespanForImplicitFlow": 900,
+    "ssoSessionIdleTimeout": 1800,
+    "ssoSessionMaxLifespan": 36000,
+    "ssoSessionIdleTimeoutRememberMe": 0,
+    "ssoSessionMaxLifespanRememberMe": 0,
+    "accessCodeLifespan": 60,
+    "accessCodeLifespanUserAction": 300,
+    "accessCodeLifespanLogin": 1800,
+    "actionTokenGeneratedByAdminLifespan": 43200,
+    "actionTokenGeneratedByUserLifespan": 300,
+    "oauth2DeviceCodeLifespan": 600,
+    "oauth2DevicePollingInterval": 5,
+    "internationalizationEnabled": true,
+    "supportedLocales": ["en", "es", "fr", "de", "ja", "zh-CN"],
+    "defaultLocale": "en",
+    "clients": [
+      {
+        "clientId": "hr-web-app",
+        "name": "HR Lookout Web Application",
+        "description": "Next.js web application",
+        "enabled": true,
+        "clientAuthenticatorType": "client-secret",
+        "secret": "hr-web-app-secret-2025-change-in-production",
+        "redirectUris": [
+          "http://localhost:3000/*",
+          "http://localhost:3000/auth/callback",
+          "https://hr-lookout.com/*"
+        ],
+        "webOrigins": [
+          "http://localhost:3000",
+          "https://hr-lookout.com"
+        ],
+        "standardFlowEnabled": true,
+        "implicitFlowEnabled": false,
+        "directAccessGrantsEnabled": true,
+        "serviceAccountsEnabled": false,
+        "publicClient": false,
+        "protocol": "openid-connect",
+        "attributes": {
+          "pkce.code.challenge.method": "S256"
+        },
+        "fullScopeAllowed": true,
+        "defaultClientScopes": [
+          "web-origins",
+          "acr",
+          "profile",
+          "roles",
+          "email"
+        ],
+        "optionalClientScopes": [
+          "address",
+          "phone",
+          "offline_access",
+          "microprofile-jwt"
+        ]
+      },
+      {
+        "clientId": "hr-mobile-app",
+        "name": "HR Lookout Mobile Application",
+        "description": "React Native (Expo) mobile application",
+        "enabled": true,
+        "clientAuthenticatorType": "client-secret",
+        "secret": "hr-mobile-app-secret-2025-change-in-production",
+        "redirectUris": [
+          "exp://localhost:19000/*",
+          "hr-lookout://auth/callback",
+          "com.hrlookout.app://auth/callback"
+        ],
+        "webOrigins": ["+"],
+        "standardFlowEnabled": true,
+        "implicitFlowEnabled": false,
+        "directAccessGrantsEnabled": true,
+        "serviceAccountsEnabled": false,
+        "publicClient": true,
+        "protocol": "openid-connect",
+        "attributes": {
+          "pkce.code.challenge.method": "S256"
+        },
+        "fullScopeAllowed": true,
+        "defaultClientScopes": [
+          "web-origins",
+          "acr",
+          "profile",
+          "roles",
+          "email"
+        ],
+        "optionalClientScopes": [
+          "address",
+          "phone",
+          "offline_access",
+          "microprofile-jwt"
+        ]
+      },
+      {
+        "clientId": "hr-core-service",
+        "name": "HR Core Microservice",
+        "description": "Backend service for core HRIS functionality",
+        "enabled": true,
+        "clientAuthenticatorType": "client-secret",
+        "secret": "hr-core-service-secret-2025-change-in-production",
+        "standardFlowEnabled": false,
+        "implicitFlowEnabled": false,
+        "directAccessGrantsEnabled": false,
+        "serviceAccountsEnabled": true,
+        "publicClient": false,
+        "protocol": "openid-connect",
+        "fullScopeAllowed": true,
+        "defaultClientScopes": [
+          "web-origins",
+          "acr",
+          "profile",
+          "roles",
+          "email"
+        ]
+      },
+      {
+        "clientId": "payroll-service",
+        "name": "Payroll Microservice",
+        "description": "Backend service for payroll functionality",
+        "enabled": true,
+        "clientAuthenticatorType": "client-secret",
+        "secret": "payroll-service-secret-2025-change-in-production",
+        "standardFlowEnabled": false,
+        "implicitFlowEnabled": false,
+        "directAccessGrantsEnabled": false,
+        "serviceAccountsEnabled": true,
+        "publicClient": false,
+        "protocol": "openid-connect",
+        "fullScopeAllowed": true,
+        "defaultClientScopes": [
+          "web-origins",
+          "acr",
+          "profile",
+          "roles",
+          "email"
+        ]
+      }
+    ],
+    "roles": {
+      "realm": [
+        {
+          "name": "hr_admin",
+          "description": "Full administrative access to all HR functions",
+          "composite": false
+        },
+        {
+          "name": "hr_manager",
+          "description": "Manager-level access to HR functions",
+          "composite": false
+        },
+        {
+          "name": "hr_specialist",
+          "description": "HR specialist with limited administrative access",
+          "composite": false
+        },
+        {
+          "name": "employee",
+          "description": "Standard employee access",
+          "composite": false
+        },
+        {
+          "name": "payroll_admin",
+          "description": "Payroll administration access",
+          "composite": false
+        },
+        {
+          "name": "finance_viewer",
+          "description": "Read-only access to financial data",
+          "composite": false
+        }
+      ]
+    },
+    "groups": [
+      {
+        "name": "HR",
+        "path": "/HR",
+        "realmRoles": ["hr_specialist"]
+      },
+      {
+        "name": "Management",
+        "path": "/Management",
+        "realmRoles": ["hr_manager"]
+      },
+      {
+        "name": "Finance",
+        "path": "/Finance",
+        "realmRoles": ["finance_viewer"]
+      },
+      {
+        "name": "Employees",
+        "path": "/Employees",
+        "realmRoles": ["employee"]
+      }
+    ],
+    "users": [
+      {
+        "username": "admin",
+        "email": "admin@hrlookout.local",
+        "emailVerified": true,
+        "firstName": "System",
+        "lastName": "Administrator",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "admin123",
+            "temporary": false
+          }
+        ],
+        "realmRoles": ["hr_admin"],
+        "groups": ["/HR", "/Management"]
+      },
+      {
+        "username": "hr.manager",
+        "email": "hr.manager@hrlookout.local",
+        "emailVerified": true,
+        "firstName": "Jane",
+        "lastName": "Manager",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "manager123",
+            "temporary": false
+          }
+        ],
+        "realmRoles": ["hr_manager", "employee"],
+        "groups": ["/HR", "/Management"]
+      },
+      {
+        "username": "employee",
+        "email": "employee@hrlookout.local",
+        "emailVerified": true,
+        "firstName": "John",
+        "lastName": "Employee",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "employee123",
+            "temporary": false
+          }
+        ],
+        "realmRoles": ["employee"],
+        "groups": ["/Employees"]
+      }
+    ],
+    "scopeMappings": [],
+    "clientScopeMappings": {},
+    "defaultDefaultClientScopes": [
+      "web-origins",
+      "acr",
+      "profile",
+      "roles",
+      "email"
+    ],
+    "defaultOptionalClientScopes": [
+      "address",
+      "phone",
+      "offline_access",
+      "microprofile-jwt"
+    ],
+    "browserSecurityHeaders": {
+      "contentSecurityPolicyReportOnly": "",
+      "xContentTypeOptions": "nosniff",
+      "xRobotsTag": "none",
+      "xFrameOptions": "SAMEORIGIN",
+      "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+      "xXSSProtection": "1; mode=block",
+      "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+    },
+    "smtpServer": {},
+    "eventsEnabled": true,
+    "eventsListeners": ["jboss-logging"],
+    "enabledEventTypes": [
+      "LOGIN",
+      "LOGIN_ERROR",
+      "LOGOUT",
+      "REGISTER",
+      "UPDATE_PASSWORD",
+      "UPDATE_PROFILE"
+    ],
+    "adminEventsEnabled": true,
+    "adminEventsDetailsEnabled": true
+  }
+  

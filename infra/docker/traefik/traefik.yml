@@ -1,0 +1,34 @@
+# =============================================================================
+# TRAEFIK STATIC CONFIGURATION
+# =============================================================================
+
+# API and Dashboard
+api:
+  dashboard: true
+  insecure: true
+
+# Entry Points
+entryPoints:
+  web:
+    address: ":80"
+
+# Providers
+providers:
+  docker:
+    exposedByDefault: false
+    network: hr-lookout-network
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Logging
+log:
+  level: INFO
+  format: json
+
+# Access Logs
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: keep
