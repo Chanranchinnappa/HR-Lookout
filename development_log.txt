@@ -900,3 +900,475 @@ Phase 2 successfully completed. All core backend functionality is working. The s
 **Date**: October 25, 2025, 04:00 AM IST  
 **Phase**: 2 of 5 Complete ✅
 
+# Development Log - Phase 3: Next.js Web Frontend
+
+**Duration**: ~4 hours  
+**Date**: October 25, 2025  
+**Status**: ✅ Completed
+
+---
+
+## Overview
+
+Phase 3 focused on building a modern, responsive web frontend using Next.js 14 that connects to the Django REST API built in Phase 2.
+
+---
+
+## Technology Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **HTTP Client**: Axios
+- **State Management**: React Hooks (useState, useEffect)
+- **Build Tool**: Turbopack (Next.js 14 default)
+
+---
+
+## Implementation Details
+
+### 1. Project Setup
+
+**Created Next.js application:**
+npx create-next-app@latest web
+
+**Configuration choices:**
+- ✅ TypeScript
+- ✅ ESLint
+- ✅ Tailwind CSS
+- ❌ src/ directory (using app/ directly)
+- ✅ App Router
+- ❌ Custom import alias
+
+**Installed dependencies:**
+npm install @tanstack/react-query axios zustand lucide-react
+npm install -D @types/node
+
+---
+
+### 2. API Client Configuration
+
+**File**: `services/web/lib/api.ts`
+
+Created centralized API client using Axios with:
+- Base URL configuration via environment variables
+- Request/response interceptors
+- Organized API methods by resource (employees, organizations, departments)
+- Error handling with console logging
+
+**API Methods Implemented:**
+- `organizationsApi`: getAll, getById, create, update, delete
+- `employeesApi`: getAll, getById, create, update, delete, search
+- `departmentsApi`: getAll, getById, create, update, delete
+- `healthApi`: check
+
+---
+
+### 3. TypeScript Types
+
+**File**: `services/web/types/index.ts`
+
+Defined comprehensive TypeScript interfaces:
+- `Organization` - Complete org structure with metadata
+- `Department` - Department hierarchy support
+- `Employee` - Full employee profile with relationships
+- `PaginatedResponse<T>` - Generic paginated API response
+
+---
+
+### 4. Environment Configuration
+
+**Files**:
+- `.env.local` - Next.js environment variables
+- `next.config.ts` - API proxy configuration
+
+**Environment variables:**
+NEXT_PUBLIC_API_URL=http://localhost:8001
+NEXT_PUBLIC_APP_NAME=HR-Lookout
+
+**Next.js config:**
+- API rewrites for `/api/*` → `http://localhost:8001/api/*`
+- Image domain configuration for localhost
+
+---
+
+### 5. Application Layout
+
+**File**: `services/web/app/layout.tsx`
+
+**Features:**
+- Global navigation bar with HR-Lookout branding
+- Responsive navigation menu
+- Links to Dashboard, Employees, Organizations
+- Consistent layout across all pages
+- Max-width container for content
+
+---
+
+### 6. Dashboard Page
+
+**File**: `services/web/app/page.tsx`
+
+**Features:**
+- Statistics cards showing:
+  - Total organizations count
+  - Total employees count
+  - System status indicator
+- Real-time data fetching from API
+- Loading state with spinner
+- Error handling with user-friendly messages
+- Quick action cards for:
+  - Add Employee
+  - Add Organization
+
+**Key Implementation:**
+- Uses `useEffect` hook for data fetching on mount
+- `useState` for managing statistics and loading states
+- Parallel API calls using `Promise.all`
+- Responsive grid layout (1 col mobile, 2 col tablet, 3 col desktop)
+
+---
+
+### 7. Employees Management Page
+
+**File**: `services/web/app/employees/page.tsx`
+
+**Features:**
+- **List View**:
+  - Table with columns: Employee, Email, Job Title, Organization, Status, Actions
+  - Employee avatar with initials
+  - Status badges (ACTIVE/INACTIVE color-coded)
+  - Delete action button
+  - Empty state with helpful message
+
+- **Search Functionality**:
+  - Real-time search bar
+  - Filters by: first name, last name, email, job title, employee ID
+  - Case-insensitive matching
+  - Instant results (no API call needed - client-side filtering)
+
+- **Create Form**:
+  - Toggleable form (show/hide with button)
+  - Fields: Employee ID, Organization (dropdown), First Name, Last Name, Email, Phone, Job Title, Hire Date
+  - Form validation (required fields)
+  - Error handling with user-friendly alerts
+  - Success message on creation
+  - Auto-refresh list after creation
+  - Form reset after successful submission
+
+**Key Implementation:**
+- Two-column responsive grid for form fields
+- Organization dropdown populated from API
+- Hard delete implementation (complete removal from database)
+- Better error display showing validation messages from backend
+- Search query state management with `useState`
+- Filter function using `Array.prototype.filter()`
+
+---
+
+### 8. Organizations Management Page
+
+**File**: `services/web/app/organizations/page.tsx`
+
+**Features:**
+- **Grid View**:
+  - Card-based layout (3 columns on desktop)
+  - Organization name and active status badge
+  - Key information: Email, Tax ID, Location, Employee count
+  - Delete action button per card
+
+- **Create Form**:
+  - Toggleable form
+  - Fields: Name, Legal Name, Email, Phone, Address, City, State, Postal Code, Tax ID, Fiscal Year Start
+  - Comprehensive organization information capture
+  - Form validation
+  - Auto-refresh after creation
+
+**Key Implementation:**
+- Responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
+- Card hover effects
+- Empty state with icon and message
+- Two-column form layout
+- Date picker for fiscal year start
+
+---
+
+### 9. Styling & UX Improvements
+
+**Global CSS** (`services/web/app/globals.css`):
+
+**Improvements Made:**
+- Fixed input text visibility (dark text color)
+- Enhanced form label readability
+- Proper placeholder text styling
+- Dark mode support for inputs
+- Consistent form element styling across the app
+
+**Key CSS Rules:**
+/* Input text - dark and readable */
+input, select, textarea {
+color: #1f2937 !important;
+font-weight: 500;
+}
+
+/* Placeholder text - medium gray */
+input::placeholder {
+color: #9ca3af !important;
+font-weight: 400;
+}
+
+/* Labels - visible and bold */
+label {
+color: #374151 !important;
+font-weight: 500;
+}
+
+---
+
+### 10. Backend Integration & CORS
+
+**Updated**: `HR-Lookout/.env`
+
+Added CORS configuration for Next.js frontend:
+DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:19006
+
+**Django settings** (already configured in Phase 2):
+- `CORS_ALLOW_CREDENTIALS = True`
+- Dynamic CORS origins from environment variables
+
+---
+
+## File Structure
+
+services/web/
+├── app/
+│ ├── layout.tsx # Root layout with navigation
+│ ├── page.tsx # Dashboard page
+│ ├── globals.css # Global styles
+│ ├── employees/
+│ │ └── page.tsx # Employees management
+│ └── organizations/
+│ └── page.tsx # Organizations management
+├── lib/
+│ └── api.ts # API client & methods
+├── types/
+│ └── index.ts # TypeScript interfaces
+├── public/ # Static assets
+├── .env.local # Environment variables
+├── next.config.ts # Next.js configuration
+├── tailwind.config.ts # Tailwind CSS configuration
+├── tsconfig.json # TypeScript configuration
+└── package.json # Dependencies
+
+
+---
+
+## Key Features Implemented
+
+### ✅ Dashboard
+- Real-time statistics from backend API
+- Organization count
+- Employee count
+- System status indicator
+- Quick action cards
+
+### ✅ Employee Management
+- View all employees in table format
+- Create new employees
+- Delete employees (hard delete)
+- Search/filter employees by multiple fields
+- Organization dropdown selection
+- Form validation
+- Error handling with user-friendly messages
+
+### ✅ Organization Management
+- View all organizations in card grid
+- Create new organizations
+- Delete organizations
+- Comprehensive organization details
+- Active/Inactive status badges
+
+### ✅ User Experience
+- Responsive design (mobile, tablet, desktop)
+- Loading states with spinners
+- Empty states with helpful messages
+- Error messages with details
+- Success confirmations
+- Hover effects and transitions
+- Consistent styling across pages
+
+---
+
+## Testing & Validation
+
+### Manual Testing Performed
+
+**✅ Dashboard:**
+- Loads correctly with statistics
+- Shows accurate counts from database
+- Quick actions navigate to correct pages
+
+**✅ Employees Page:**
+- Lists all employees correctly
+- Search filters work in real-time
+- Create form validates required fields
+- Organizations populate in dropdown
+- Employee creation succeeds
+- Delete removes employee from list and database
+- Can reuse email after deletion (hard delete working)
+- Error messages display properly
+
+**✅ Organizations Page:**
+- Lists all organizations in cards
+- Create form validates all required fields
+- Organization creation succeeds
+- Delete removes organization
+- Employee count displays correctly
+
+**✅ Navigation:**
+- All nav links work correctly
+- Active page highlighting
+- Responsive menu
+
+**✅ Styling:**
+- Text in inputs is dark and readable
+- Labels are visible
+- Placeholders have good contrast
+- Forms are user-friendly
+- Buttons have hover states
+
+---
+
+## Challenges & Solutions
+
+### Challenge 1: CORS Errors
+**Issue**: Browser blocking requests from localhost:3000 to localhost:8001  
+**Solution**: Updated `.env` with proper CORS origins and restarted hr-core service
+
+### Challenge 2: Soft Delete vs Hard Delete
+**Issue**: Deleted employees remained in database (soft delete), preventing email reuse  
+**Solution**: Modified `views.py` to use `instance.delete()` instead of status update
+
+### Challenge 3: Text Visibility in Form Inputs
+**Issue**: Input text was too light and hard to read  
+**Solution**: Added global CSS rules with `!important` to force darker text colors
+
+### Challenge 4: Empty Organization Dropdown
+**Issue**: Organization dropdown was empty when creating employees  
+**Solution**: Added parallel API call to fetch organizations on page load
+
+### Challenge 5: Search Functionality
+**Issue**: Needed to filter employees without additional API calls  
+**Solution**: Implemented client-side filtering using `Array.filter()` with search query state
+
+---
+
+## Performance Considerations
+
+- **API Calls**: Optimized with `Promise.all()` for parallel fetching
+- **Client-Side Filtering**: Search implemented without backend calls for instant results
+- **Loading States**: Prevents multiple clicks during API operations
+- **Auto-Reload**: Efficient list refresh after create/delete operations
+- **Code Splitting**: Next.js automatic code splitting per route
+
+---
+
+## Files Created/Modified
+
+**New Files: ~15**
+- `services/web/lib/api.ts`
+- `services/web/types/index.ts`
+- `services/web/app/layout.tsx`
+- `services/web/app/page.tsx`
+- `services/web/app/employees/page.tsx`
+- `services/web/app/organizations/page.tsx`
+- `services/web/.env.local`
+- `services/web/next.config.ts`
+- `services/web/app/globals.css` (modified)
+- Plus ~50+ Next.js framework files from `create-next-app`
+
+**Modified Files: 2**
+- `HR-Lookout/.env` (added CORS origins)
+- `services/hr-core/hr_core/apps/employees/views.py` (hard delete)
+
+---
+
+## Dependencies Added
+{
+"dependencies": {
+"next": "16.0.0",
+"react": "^19.0.0",
+"react-dom": "^19.0.0",
+"axios": "^1.6.0",
+"@tanstack/react-query": "^5.0.0",
+"zustand": "^4.4.0",
+"lucide-react": "^0.300.0"
+},
+"devDependencies": {
+"typescript": "^5",
+"@types/node": "^20",
+"@types/react": "^19",
+"@types/react-dom": "^19",
+"tailwindcss": "^3.4.1",
+"eslint": "^8",
+"eslint-config-next": "16.0.0"
+}
+}
+
+---
+
+## API Endpoints Used
+GET /health/
+GET /api/v1/organizations/
+POST /api/v1/organizations/
+DELETE /api/v1/organizations/:id/
+GET /api/v1/employees/
+POST /api/v1/employees/
+DELETE /api/v1/employees/:id/
+
+---
+
+## Next Steps (Phase 4)
+
+- [ ] React Native mobile app (iOS/Android)
+- [ ] Authentication integration with Keycloak
+- [ ] Employee detail/edit pages
+- [ ] Department management
+- [ ] Advanced search with backend API
+- [ ] Pagination for large datasets
+- [ ] File upload for employee documents
+- [ ] Reports and analytics
+
+---
+
+## Lessons Learned
+
+1. **CORS Setup**: Always configure CORS before starting frontend work to avoid debugging issues
+2. **TypeScript**: Strong typing catches errors early and improves DX
+3. **Client-Side Filtering**: Good for small datasets, reduces API calls
+4. **Global CSS**: Using `!important` for framework overrides is sometimes necessary
+5. **Error Handling**: User-friendly error messages significantly improve UX
+6. **Hard vs Soft Delete**: Consider data integrity requirements early in design
+
+---
+
+## Time Breakdown
+
+- Project setup & configuration: 30 minutes
+- API client & types: 30 minutes
+- Dashboard implementation: 30 minutes
+- Employees page: 1 hour
+- Organizations page: 45 minutes
+- Search functionality: 20 minutes
+- Styling improvements: 30 minutes
+- Bug fixes & testing: 45 minutes
+- **Total**: ~4 hours
+
+---
+
+**Phase 3 Status: ✅ COMPLETE**
+
+The web frontend is fully functional with CRUD operations, search, and a polished user interface. All core features are working and tested.
+
+
+

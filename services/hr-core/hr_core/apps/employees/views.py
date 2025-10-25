@@ -115,12 +115,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             request=self.request
         )
     
-    def perform_destroy(self, instance):
-        """
-        Soft delete employee (mark as terminated)
-        """
-        instance.employment_status = 'TERMINATED'
-        instance.save()
+    def destroy(self, request, *args, **kwargs):
+        """Hard delete (permanent removal)"""
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
         
         # Log to audit
         audit_logger = get_audit_logger()

@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 249, 250, 251;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 17, 24, 39;
+    --background-end-rgb: 31, 41, 55;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Fix input text visibility - make all text darker */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="date"],
+input[type="number"],
+input[type="password"],
+select,
+textarea {
+  color: #1f2937 !important; /* Dark gray text */
+  font-weight: 500;
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="date"]::placeholder,
+input[type="number"]::placeholder,
+input[type="password"]::placeholder,
+select::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important; /* Medium gray placeholder */
+  font-weight: 400;
+}
+
+/* Dark mode inputs */
+@media (prefers-color-scheme: dark) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    color: #f3f4f6 !important; /* Light gray in dark mode */
+    background-color: #374151 !important;
+    border-color: #4b5563 !important;
+  }
+  
+  input[type="text"]::placeholder,
+  input[type="email"]::placeholder,
+  input[type="tel"]::placeholder,
+  input[type="date"]::placeholder,
+  input[type="number"]::placeholder,
+  input[type="password"]::placeholder,
+  select::placeholder,
+  textarea::placeholder {
+    color: #9ca3af !important;
+  }
+}
+
+/* Make form labels more visible */
+label {
+  color: #002d76 !important;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  label {
+    color: #e9eef6 !important;
+  }
+}
