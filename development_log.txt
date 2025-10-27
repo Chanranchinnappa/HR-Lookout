@@ -1,1374 +1,827 @@
-================================================================================
 HR-LOOKOUT DEVELOPMENT LOG
-================================================================================
 Project: HR-Lookout - Microservice-based HRIS Platform
 Started: October 24, 2025
-================================================================================
 
---------------------------------------------------------------------------------
 PHASE 0: PREPARATION & MONOREPO INIT
 Completed: October 24, 2025
---------------------------------------------------------------------------------
 
 FEATURE: Project Initialization
-  [Created] /hr-lookout/
-    - Root project directory created
+[Created] /hr-lookout/ - Root project directory
 
-  [Created] /.git/
-    - Git repository initialized
+[Created] /.git/ - Git repository initialized
 
-  [Created] /pnpm-workspace.yaml
-    - Configured pnpm workspaces for services/, platforms/, and packages/
+[Created] /pnpm-workspace.yaml - Workspace config for services/, platforms/, packages/
 
-  [Created] /package.json
-    - Root package.json with project metadata and scripts
+[Created] /package.json - Root package.json with project metadata
 
-  [Created] /.gitignore
-    - Comprehensive .gitignore for Node.js, Python, Docker, Terraform, and IDEs
+[Created] /.gitignore - Comprehensive ignore rules
 
-  [Created] /README.md
-    - Project overview, architecture, tech stack, and phase roadmap
+[Created] /README.md - Project overview and roadmap
 
-  [Created] /LICENSE
-    - MIT License
+[Created] /LICENSE - MIT License
 
-  [Created] /.editorconfig
-    - Editor configuration for consistent code formatting
+[Created] /.editorconfig - Editor configuration
 
 FEATURE: Directory Structure
-  [Created] /services/
-    - Directory for backend microservices (Django)
+[Created] /services/ - Backend microservices
 
-  [Created] /services/.gitkeep
-    - Placeholder to track empty directory in Git
+[Created] /platforms/ - Frontend applications
 
-  [Created] /platforms/
-    - Directory for frontend applications (Web, Mobile)
+[Created] /packages/ - Shared libraries
 
-  [Created] /platforms/.gitkeep
-    - Placeholder to track empty directory in Git
+[Created] /infra/ - Infrastructure code
 
-  [Created] /packages/
-    - Directory for shared code (TypeScript, Python libraries)
+GIT COMMITS: Initial commit: "chore: phase 0 - initialize monorepo structure"
 
-  [Created] /packages/.gitkeep
-    - Placeholder to track empty directory in Git
-
-  [Created] /infra/
-    - Directory for infrastructure code (Docker, K8s, Terraform)
-
-  [Created] /infra/.gitkeep
-    - Placeholder to track empty directory in Git
-
-FEATURE: Development Log
-  [Created] /development_log.txt
-    - Initialized this development log for tracking all changes
-
-GIT COMMITS:
-  - Initial commit: "chore: phase 0 - initialize monorepo structure"
-
---------------------------------------------------------------------------------
-END OF PHASE 0
---------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
 PHASE 1: CORE INFRASTRUCTURE (DOCKER COMPOSE)
 Completed: October 25, 2025
---------------------------------------------------------------------------------
 
-FEATURE: Environment Configuration
-  [Created] /.env
-    - Environment variables for all services (Postgres, Redis, MongoDB, Neo4j, Keycloak, MinIO, Django)
-    - Database credentials and connection strings
-    - Service ports and configuration
-    - Development-specific settings
+Services Deployed:
+Traefik - API Gateway with dashboard
 
-FEATURE: Docker Compose Orchestration
-  [Created] /docker-compose.yml
-    - Complete multi-service Docker Compose configuration
-    - Services: Traefik, PostgreSQL, Redis, MongoDB, Neo4j, Keycloak, MinIO
-    - Service health checks for all containers
-    - Volume management for data persistence
-    - Network configuration (hr-lookout-network)
-    - Service dependencies and startup order
+PostgreSQL 15 - 3 databases (keycloak, hr_core, payroll)
 
-FEATURE: API Gateway (Traefik)
-  [Created] /infra/docker/traefik/
-    - Directory for Traefik configuration
+MongoDB 7 - Audit logging with schema validation
 
-  [Created] /infra/docker/traefik/traefik.yml
-    - Static Traefik configuration
-    - API dashboard enabled
-    - Docker provider configuration
-    - Entry points (HTTP on port 80)
-    - JSON logging
+Redis 7 - Caching layer
 
-  [Created] /infra/docker/traefik/dynamic/
-    - Directory for dynamic Traefik configuration
+Neo4j 5 - Graph database (APOC + Graph Data Science plugins)
 
-  [Created] /infra/docker/traefik/dynamic/.gitkeep
-    - Placeholder for dynamic config files
+Keycloak - Pre-configured hr-lookout realm
 
-FEATURE: PostgreSQL Database
-  [Created] /infra/docker/postgres/
-    - Directory for PostgreSQL configuration
+MinIO - 3 auto-created buckets (documents, profile-pictures, reports)
 
-  [Created] /infra/docker/postgres/init-scripts/
-    - Directory for database initialization scripts
+Key Configuration Files:
+.env - Environment variables for all services
 
-  [Created] /infra/docker/postgres/init-scripts/01-create-keycloak-db.sql
-    - Creates Keycloak database and user
-    - Grants necessary privileges
+docker-compose.yml - Complete orchestration with health checks
 
-  [Created] /infra/docker/postgres/init-scripts/02-create-hr-core-db.sql
-    - Creates hr_core_db database for HR Core microservice (Phase 2)
+Database init scripts (3 SQL, 1 MongoDB)
 
-  [Created] /infra/docker/postgres/init-scripts/03-create-payroll-db.sql
-    - Creates payroll_db database for Payroll microservice (Phase 5)
+Keycloak realm: 4 clients, 6 roles, 4 groups, 3 test users
 
-FEATURE: MongoDB Audit System
-  [Created] /infra/docker/mongodb/
-    - Directory for MongoDB configuration
+Network: hr-lookout-network for service isolation
 
-  [Created] /infra/docker/mongodb/init-scripts/
-    - Directory for MongoDB initialization scripts
+PHASE 2: BACKEND MVP (DJANGO MICROSERVICE)
+Completed: October 25, 2025
+Duration: 2.5 hours
 
-  [Created] /infra/docker/mongodb/init-scripts/01-init-audit-db.js
-    - Creates hr_lookout_audit database
-    - Creates audit_logs collection with JSON schema validation
-    - Creates error_logs collection with JSON schema validation
-    - Creates system_events collection with JSON schema validation
-    - Creates indexes for efficient querying
-    - Creates audit_reader user for analytics
+Django Project Structure
+Django 5.0.7 with 4 apps: authentication, audit, employees, organizations
 
-FEATURE: Authentication & Identity (Keycloak)
-  [Created] /infra/docker/keycloak/
-    - Directory for Keycloak configuration
+Multi-database connections (PostgreSQL, MongoDB, Neo4j, Redis)
 
-  [Created] /infra/docker/keycloak/realms/
-    - Directory for Keycloak realm imports
+Health check endpoints (/health/, /health/ready/, /health/live/)
 
-  [Created] /infra/docker/keycloak/realms/hr-lookout-realm.json
-    - Pre-configured hr-lookout realm
-    - Four clients: hr-web-app, hr-mobile-app, hr-core-service, payroll-service
-    - Client secrets and redirect URIs
-    - PKCE support for mobile/web
-    - Service accounts for microservices
-    - Six realm roles: hr_admin, hr_manager, hr_specialist, employee, payroll_admin, finance_viewer
-    - Four groups: HR, Management, Finance, Employees
-    - Three test users: admin, hr.manager, employee
-    - Security headers and brute-force protection
-    - Event logging enabled
+Models Created
+Employee (19 fields):
 
-FEATURE: Object Storage (MinIO)
-  [Created] /infra/docker/minio/
-    - Directory for MinIO configuration (empty for now)
+Personal: first_name, last_name, middle_name, preferred_name, date_of_birth
 
-  [Modified] /docker-compose.yml
-    - Added minio-init service to auto-create buckets
-    - Three buckets: hr-documents, hr-profile-pictures, hr-reports
-    - Public read access for hr-profile-pictures
+Contact: email (unique), personal_email, phone, mobile
 
-FEATURE: Redis Cache
-  [Created] /infra/docker/redis/
-    - Directory for Redis configuration (empty for now, using defaults)
+Address: address_line1, address_line2, city, state, postal_code, country
 
-FEATURE: Neo4j Graph Database
-  [Created] /infra/docker/neo4j/
-    - Directory for Neo4j configuration (empty for now)
-    - Neo4j configured with APOC and Graph Data Science plugins
+Employment: job_title, employment_status, employment_type, hire_date, termination_date
 
-FEATURE: Infrastructure Documentation
-  [Created] /infra/README.md
-    - Comprehensive infrastructure documentation
-    - Service URLs and credentials
-    - Quick start guide
-    - Troubleshooting section
-    - Database configuration details
-    - Production infrastructure notes
+Relationships: organization_id (FK), department_id (FK), manager_id (FK to self)
 
-GIT COMMITS:
-  - To be committed: "feat: phase 1 - docker compose infrastructure with traefik, keycloak, databases"
+Profile: profile_picture, bio, keycloak_user_id
 
---------------------------------------------------------------------------------
-END OF PHASE 1
---------------------------------------------------------------------------------
-# Development Log - Phase 2: Backend MVP
+Organization (21 fields):
 
-**Project**: HR-Lookout  
-**Phase**: Phase 2 - Django Backend Microservice  
-**Date**: October 24-25, 2025  
-**Duration**: 2.5 hours  
-**Status**: ✅ Complete  
+Basic: name (unique), legal_name, email, phone, website
 
----
+Address: 5 address fields
 
-## Session Overview
+Identifiers: tax_id (unique), registration_number
 
-Built the complete Django backend microservice (hr-core) with REST and GraphQL APIs for employee and organization management.
+Financial: fiscal_year_start, currency
 
----
+Settings: timezone, logo_url, is_active
 
-## What Was Built
+Department (11 fields with hierarchy):
 
-### 1. Django Project Structure
-- ✅ Created Django 5.0.7 project with proper configuration
-- ✅ Set up 4 Django apps (authentication, audit, employees, organizations)
-- ✅ Configured PostgreSQL, MongoDB, Neo4j, Redis connections
-- ✅ Implemented health check endpoints
+Basic: name, code, description
 
-### 2. Database Models
-- ✅ Employee model with complete fields
-- ✅ Organization model
-- ✅ Department model with hierarchy
-- ✅ Document model
-- ✅ Database migrations (two-stage to handle circular dependencies)
+Relationships: organization_id, parent_department_id, head_id (to Employee)
 
-### 3. REST APIs
-- ✅ Django REST Framework integration
-- ✅ Employee CRUD endpoints
-- ✅ Organization CRUD endpoints
-- ✅ Department CRUD endpoints
-- ✅ Serializers for all models
-- ✅ ViewSets with filtering and search
+Financial: cost_center, is_active
 
-### 4. GraphQL API
-- ✅ Graphene-Django integration
-- ✅ Employee queries
-- ✅ Organization queries
-- ✅ Search functionality
-- ✅ GraphiQL playground
+Document (file metadata):
 
-### 5. Additional Features
-- ✅ MongoDB audit logging framework
-- ✅ Neo4j org chart service
-- ✅ Django Admin panel configuration
-- ✅ Keycloak authentication framework (disabled for dev)
-- ✅ Custom exception handling
+employee_id, title, document_type, file_path, file_size, mime_type, uploaded_at
 
----
+REST API Endpoints
+Organizations:
 
-## Files Created (29 Total)
+GET/POST /api/v1/organizations/
 
-### Core Configuration (6 files)
-1. `services/hr-core/manage.py`
-2. `services/hr-core/requirements.txt`
-3. `services/hr-core/config/settings.py`
-4. `services/hr-core/config/urls.py`
-5. `services/hr-core/config/wsgi.py`
-6. `services/hr-core/config/asgi.py`
+GET/PUT/PATCH/DELETE /api/v1/organizations/{id}/
 
-### GraphQL (1 file)
-7. `services/hr-core/config/schema.py`
+GET /api/v1/organizations/{id}/departments/
 
-### Authentication App (5 files)
-8. `services/hr-core/hr_core/apps/authentication/__init__.py`
-9. `services/hr-core/hr_core/apps/authentication/backends.py`
-10. `services/hr-core/hr_core/apps/authentication/middleware.py`
-11. `services/hr-core/hr_core/apps/authentication/exceptions.py`
-12. `services/hr-core/hr_core/apps/authentication/views.py`
+GET /api/v1/organizations/{id}/employees/
 
-### Audit App (2 files)
-13. `services/hr-core/hr_core/apps/audit/logger.py`
-14. `services/hr-core/hr_core/apps/audit/middleware.py`
+Employees:
 
-### Employees App (6 files)
-15. `services/hr-core/hr_core/apps/employees/models.py`
-16. `services/hr-core/hr_core/apps/employees/serializers.py`
-17. `services/hr-core/hr_core/apps/employees/views.py`
-18. `services/hr-core/hr_core/apps/employees/urls.py`
-19. `services/hr-core/hr_core/apps/employees/admin.py`
-20. `services/hr-core/hr_core/apps/employees/migrations/` (2 migration files)
+GET/POST /api/v1/employees/
 
-### Organizations App (7 files)
-21. `services/hr-core/hr_core/apps/organizations/models.py`
-22. `services/hr-core/hr_core/apps/organizations/serializers.py`
-23. `services/hr-core/hr_core/apps/organizations/views.py`
-24. `services/hr-core/hr_core/apps/organizations/urls.py`
-25. `services/hr-core/hr_core/apps/organizations/admin.py`
-26. `services/hr-core/hr_core/apps/organizations/neo4j_service.py`
-27. `services/hr-core/hr_core/apps/organizations/migrations/` (1 migration file)
+GET/PUT/PATCH/DELETE /api/v1/employees/{id}/
 
-### Docker & Scripts (2 files)
-28. `services/hr-core/Dockerfile`
-29. `services/hr-core/.dockerignore`
+GET /api/v1/employees/me/
 
----
+GET /api/v1/employees/search/?q={query}
 
-## Step-by-Step Process
+Departments:
 
-### Step 1: Django Project Setup (30 mins)
-**Commands**:
+GET/POST /api/v1/organizations/departments/
+
+GET/PUT/DELETE /api/v1/organizations/departments/{id}/
+
+GraphQL API
+Queries Implemented:
+
+allOrganizations, organization(id: Int)
+
+allEmployees(employment_status: String), employee(id: Int)
+
+searchEmployees(query: String)
+
+Nested relationships and filtering support
+
+Key Features
+MongoDB Audit Logger - Captures all API operations
+
+Neo4j Org Chart Service - Framework ready (sync pending)
+
+Two-Stage Migrations - Solved Employee ↔ Department circular dependency
+
+Keycloak Authentication - Framework complete (disabled for dev)
+
+Step-by-Step Process
+Step 1: Django Setup (30 mins)
+
 cd services/hr-core
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install --upgrade pip
 pip install -r requirements.txt
 
-**Files Created**:
-- Virtual environment
-- requirements.txt with all dependencies
+Step 2: Configuration (20 mins)
 
-**Result**: ✅ Django environment ready
+Created config/settings.py with all database connections
 
----
+Configured REST Framework, GraphQL, CORS, middleware
 
-### Step 2: Django Configuration (20 mins)
-**Created**: `config/settings.py`
+Step 3: Authentication Framework (15 mins)
 
-**Configured**:
-- Database connections (PostgreSQL, MongoDB, Neo4j, Redis)
-- Django apps (employees, organizations, audit, authentication)
-- REST Framework settings
-- GraphQL settings
-- CORS and middleware
-- Static files
+Built Keycloak JWT backend
 
-**Result**: ✅ Django configured for all services
+Custom exception handler
 
----
+Health check endpoints
 
-### Step 3: Authentication Framework (15 mins)
-**Created**:
-- `authentication/backends.py` - Keycloak JWT authentication
-- `authentication/middleware.py` - Auth middleware
-- `authentication/exceptions.py` - Custom exception handler
-- `authentication/views.py` - Health check endpoints
+Step 4: Employee Models & APIs (30 mins)
 
-**Result**: ✅ Auth framework ready (disabled for development)
+Created Employee and Document models
 
----
+DRF serializers and ViewSets
 
-### Step 4: Audit Logging (10 mins)
-**Created**:
-- `audit/logger.py` - MongoDB audit logger
-- `audit/middleware.py` - Auto-audit middleware
+URL routing and admin config
 
-**Configuration**:
-- Logs all API operations to MongoDB
-- Captures user, action, resource, timestamp
-- Stores IP address and request metadata
+Step 5: Organization Models & APIs (30 mins)
 
-**Result**: ✅ Audit logging framework complete
+Created Organization and Department models
 
----
+Neo4j sync service framework
 
-### Step 5: Employee Models & APIs (30 mins)
-**Created**:
-- `employees/models.py` - Employee & Document models
-- `employees/serializers.py` - DRF serializers
-- `employees/views.py` - ViewSets with CRUD operations
-- `employees/urls.py` - URL routing
-- `employees/admin.py` - Django admin config
+Complete CRUD operations
 
-**Models**:
-- Employee (19 fields + relationships)
-- Document (file metadata)
+Step 6: GraphQL Integration (20 mins)
 
-**Endpoints**:
-- GET/POST `/api/v1/employees/`
-- GET/PUT/DELETE `/api/v1/employees/{id}/`
-- GET `/api/v1/employees/me/`
-- GET `/api/v1/employees/search/?q=query`
+Graphene-Django schema
 
-**Result**: ✅ Employee management complete
+Query types with relationships
 
----
+GraphiQL playground
 
-### Step 6: Organization Models & APIs (30 mins)
-**Created**:
-- `organizations/models.py` - Organization & Department models
-- `organizations/serializers.py` - DRF serializers
-- `organizations/views.py` - ViewSets with CRUD operations
-- `organizations/urls.py` - URL routing
-- `organizations/admin.py` - Django admin config
-- `organizations/neo4j_service.py` - Org chart service
-
-**Models**:
-- Organization (21 fields)
-- Department (11 fields + hierarchy)
-
-**Endpoints**:
-- GET/POST `/api/v1/organizations/`
-- GET/PUT/DELETE `/api/v1/organizations/{id}/`
-- GET/POST `/api/v1/organizations/departments/`
-- GET/PUT/DELETE `/api/v1/organizations/departments/{id}/`
-
-**Result**: ✅ Organization management complete
-
----
-
-### Step 7: GraphQL Integration (20 mins)
-**Created**: `config/schema.py`
-
-**Queries**:
-- `allOrganizations` - List with nested data
-- `organization(id)` - Single with relationships
-- `allEmployees` - List with filters
-- `employee(id)` - Single with relationships
-- `searchEmployees(query)` - Full-text search
-
-**Result**: ✅ GraphQL API functional
-
----
-
-### Step 8: Database Migrations (25 mins)
-**Commands**:
+Step 7: Database Migrations (25 mins)
 docker-compose exec hr-core python manage.py makemigrations organizations
 docker-compose exec hr-core python manage.py makemigrations employees
 docker-compose exec hr-core python manage.py migrate
 
-**Challenge**: Circular dependency between Employee ↔ Department
-**Solution**: Django created two-stage migration automatically
-- `employees/0001_initial.py` - Base models
-- `employees/0002_initial.py` - Foreign key relationships
-
-**Result**: ✅ All migrations applied successfully
-
----
-
-### Step 9: Docker Integration (30 mins)
-**Created**:
-- `Dockerfile` - Multi-stage build
-- `.dockerignore` - Exclude unnecessary files
-
-**Commands**:
-docker-compose build hr-core --no-cache
-docker-compose up -d hr-core
-
-**Challenge**: Docker DNS issues
-**Solution**: 
-1. Configured Docker Desktop DNS (8.8.8.8)
-2. Restarted system
-3. Build succeeded
-
-**Result**: ✅ hr-core running in Docker
-
----
-
-### Step 10: Testing & Validation (20 mins)
-**Tests Performed**:
-
-1. **Health Checks**:
-curl http://localhost:8001/health/
-
-Result: {"status":"healthy","service":"hr-core","version":"1.0.0"}
-
-2. **REST APIs**:
-curl http://localhost:8001/api/v1/organizations/
-curl http://localhost:8001/api/v1/employees/
-
-Result: [] (empty arrays - working)
-
-3. **GraphQL**:
-- Opened http://localhost:8001/graphql/
-- Successfully loaded GraphiQL interface
-
-4. **Django Admin**:
-- Created superuser
-- Accessed http://localhost:8001/admin/
-- Verified all models visible
-
-**Result**: ✅ All endpoints functional
-
----
-
-## Challenges & Solutions
+Step 8: Docker Integration (30 mins)
 
-### Challenge 1: Docker Build DNS Failure
-**Problem**: Docker couldn't resolve debian repository hostnames
-**Error**: `Could not resolve deb.debian.org`
-**Solution**: 
-1. Open Docker Desktop → Settings → Docker Engine
-2. Add DNS configuration:
-{
-"dns": ["8.8.8.8", "8.8.4.4"]
-}
-3. Restart Docker Desktop
-4. Restart system
-**Time Lost**: 15 minutes
-
----
-
-### Challenge 2: Circular Dependency in Migrations
-**Problem**: Employee → Department → Employee (head field)
-**Error**: `CircularDependencyError: employees.0001_initial, organizations.0001_initial`
-**Solution**: 
-1. Deleted initial migrations
-2. Created organizations migration first
-3. Django auto-created two-stage employee migration
-4. Applied in correct order
-**Time Lost**: 10 minutes
-
----
-
-### Challenge 3: Keycloak Authentication Errors
-**Problem**: `AsyncClient.__init__() got an unexpected keyword argument 'proxies'`
-**Error Location**: `python-keycloak` library incompatibility with `httpx`
-**Solution**: 
-1. Commented out `KeycloakAuthenticationMiddleware` in settings
-2. Changed REST_FRAMEWORK permissions to `AllowAny`
-3. Disabled authentication for development
-**Note**: Will fix in future by downgrading python-keycloak
-**Time Lost**: 20 minutes
-
----
-
-### Challenge 4: Permission Denied (403) on API
-**Problem**: ViewSets still enforcing `IsAuthenticated` permission
-**Error**: `{"error": "You do not have permission to perform this action."}`
-**Solution**:
-1. Commented out `permission_classes = [IsAuthenticated]` in:
-- `employees/views.py` (line 30)
-- `organizations/views.py` (lines 28, 87)
-2. Restarted hr-core
-**Time Lost**: 10 minutes
-
----
-
-### Challenge 5: PowerShell Docker Exec Issues
-**Problem**: Couldn't paste commands into `docker exec bash` session
-**Solution**: 
-- Used individual `docker-compose exec` commands from PowerShell instead
-- Example: `docker-compose exec hr-core python manage.py migrate`
-**Time Lost**: 5 minutes
-
----
-
-## Key Decisions
-
-### Decision 1: Two-Stage Migrations
-**Reason**: Handle circular dependency between Employee and Department
-**Alternative Considered**: Commenting out Department.head field
-**Chosen Approach**: Let Django handle it automatically
-**Result**: Clean, maintainable migration structure
-
----
-
-### Decision 2: Disable Authentication for Development
-**Reason**: python-keycloak library incompatibility
-**Alternative Considered**: Downgrade library immediately
-**Chosen Approach**: Disable for now, fix in future iteration
-**Result**: Can continue development without blocking issues
-
----
-
-### Decision 3: MongoDB for Audit Logs
-**Reason**: Better suited for write-heavy logging than PostgreSQL
-**Alternative Considered**: PostgreSQL audit table
-**Chosen Approach**: Separate MongoDB database
-**Result**: Scalable audit logging solution
-
----
-
-### Decision 4: Neo4j for Org Charts
-**Reason**: Graph database perfect for hierarchy queries
-**Alternative Considered**: PostgreSQL recursive CTEs
-**Chosen Approach**: Neo4j with REPORTS_TO relationships
-**Result**: Framework ready (sync not yet implemented)
+Multi-stage Dockerfile
 
----
-
-## Configuration Changes
-
-### settings.py Modifications for Development
-
-**Original** (production-ready):
-MIDDLEWARE = [
-'hr_core.apps.authentication.middleware.KeycloakAuthenticationMiddleware',
-]
-
-REST_FRAMEWORK = {
-'DEFAULT_AUTHENTICATION_CLASSES': [
-'hr_core.apps.authentication.backends.KeycloakAuthentication',
-],
-'DEFAULT_PERMISSION_CLASSES': [
-'rest_framework.permissions.IsAuthenticated',
-],
-}
-
-**Modified** (development):
-MIDDLEWARE = [
-# 'hr_core.apps.authentication.middleware.KeycloakAuthenticationMiddleware', # Disabled
-]
-
-REST_FRAMEWORK = {
-'DEFAULT_AUTHENTICATION_CLASSES': [
-# 'hr_core.apps.authentication.backends.KeycloakAuthentication', # Disabled
-],
-'DEFAULT_PERMISSION_CLASSES': [
-'rest_framework.permissions.AllowAny', # Changed
-],
-}
-
----
-
-### ViewSets Modifications
-
-**employees/views.py** and **organizations/views.py**:
-class EmployeeViewSet(viewsets.ModelViewSet):
-# permission_classes = [IsAuthenticated] # Commented out for development
+DNS configuration (8.8.8.8)
 
----
+Build and deploy
 
-## Testing Summary
-
-### API Endpoints Tested
-
-| Endpoint | Method | Status | Response Time |
-|----------|--------|--------|---------------|
-| `/health/` | GET | ✅ 200 | ~50ms |
-| `/health/ready/` | GET | ✅ 200 | ~100ms |
-| `/api/v1/organizations/` | GET | ✅ 200 | ~150ms |
-| `/api/v1/employees/` | GET | ✅ 200 | ~150ms |
-| `/api/v1/organizations/departments/` | GET | ✅ 200 | ~150ms |
-| `/graphql/` | GET | ✅ 200 | ~200ms |
-| `/admin/` | GET | ✅ 200 | ~300ms |
-
-### Database Queries
-
-**PostgreSQL**:
-- ✅ Tables created: organizations, departments, employees, employee_documents
-- ✅ Indexes created: 4 indexes on employees table
-- ✅ Foreign keys: All relationships working
-- ✅ Migrations: 12 migrations applied successfully
-
-**MongoDB**:
-- ✅ Database created: hr_lookout_audit
-- ✅ Collection created: audit_logs
-- ✅ Logging functional: Ready to capture events
-
-**Neo4j**:
-- ✅ Database created: hr_lookout_graph
-- ✅ Service configured: OrgChartService ready
-- ⏳ Sync pending: Not yet triggered automatically
-
-**Redis**:
-- ✅ Connection successful
-- ✅ Ready for caching
-- ⏳ Not yet utilized
-
----
-
-## Performance Metrics
-
-### Build Times
-- Docker build (first time): 161 seconds
-- Docker build (cached): ~10 seconds
-- Migration time: ~5 seconds
-
-### Container Stats
-- **hr-core**: 150MB RAM, 5% CPU (idle)
-- Total system: 2.5GB RAM for all 8 services
-
----
-
-## What's Working
-
-✅ Django project structure  
-✅ All 8 Docker services running  
-✅ PostgreSQL with 4 databases  
-✅ Database migrations applied  
-✅ REST APIs (CRUD operations)  
-✅ GraphQL API (queries)  
-✅ Django Admin panel  
-✅ Health check endpoints  
-✅ Audit logging framework  
-✅ Neo4j service configured  
-✅ Static files collected (163 files)  
-
----
-
-## What's Not Working / TODO
-
-⏳ **Keycloak Authentication**
-- Disabled due to library incompatibility
-- Need to downgrade python-keycloak or update httpx
-- Auth framework is complete, just not enabled
-
-⏳ **Neo4j Auto-Sync**
-- Service is created but not triggered
-- Need to add Django signals to sync on employee create/update
-
-⏳ **Redis Caching**
-- Connected but not yet utilized
-- Need to implement caching decorators
-
-⏳ **Rate Limiting**
-- Not configured
-- Should add Django REST Framework throttles
-
-⏳ **Unit Tests**
-- No tests written yet
-- Need to create test cases for all models and APIs
-
----
-
-## API Documentation
-
-### REST API Endpoints Created
-
-**Organizations**:
-GET /api/v1/organizations/
-POST /api/v1/organizations/
-GET /api/v1/organizations/{id}/
-PUT /api/v1/organizations/{id}/
-PATCH /api/v1/organizations/{id}/
-DELETE /api/v1/organizations/{id}/
-GET /api/v1/organizations/{id}/departments/
-GET /api/v1/organizations/{id}/employees/
-
-**Employees**:
-GET /api/v1/employees/
-POST /api/v1/employees/
-GET /api/v1/employees/{id}/
-PUT /api/v1/employees/{id}/
-PATCH /api/v1/employees/{id}/
-DELETE /api/v1/employees/{id}/
-GET /api/v1/employees/me/
-GET /api/v1/employees/search/?q={query}
-GET /api/v1/employees/{id}/documents/
-
-**Departments**:
-GET /api/v1/organizations/departments/
-POST /api/v1/organizations/departments/
-GET /api/v1/organizations/departments/{id}/
-PUT /api/v1/organizations/departments/{id}/
-DELETE /api/v1/organizations/departments/{id}/
-GET /api/v1/organizations/departments/{id}/employees/
-
-**Health**:
-GET /health/
-GET /health/ready/
-GET /health/live/
-
----
-
-### GraphQL Queries Created
-Organizations
-allOrganizations
-organization(id: Int)
-
-Employees
-allEmployees(employment_status: String)
-employee(id: Int)
-searchEmployees(query: String)
-
----
-
-## Database Schema
-
-### organizations
-- id (PK)
-- name (unique)
-- legal_name
-- email
-- phone, website
-- address fields (5)
-- tax_id (unique)
-- registration_number
-- fiscal_year_start
-- currency, timezone
-- logo_url
-- is_active
-- created_at, updated_at
-
-### departments
-- id (PK)
-- organization_id (FK)
-- parent_department_id (FK, nullable)
-- name, code
-- description
-- head_id (FK to employees, nullable) - Currently not used due to circular dependency
-- cost_center
-- is_active
-- created_at, updated_at
-
-### employees
-- id (PK)
-- employee_id (unique)
-- organization_id (FK)
-- department_id (FK, nullable)
-- manager_id (FK to self, nullable)
-- keycloak_user_id (nullable)
-- Personal info: first_name, last_name, middle_name, preferred_name, date_of_birth
-- Contact: email (unique), personal_email, phone, mobile
-- Address: address_line1, address_line2, city, state, postal_code, country
-- Employment: job_title, employment_status, employment_type, hire_date, termination_date
-- Profile: profile_picture, bio
-- Metadata: created_at, updated_at, created_by, updated_by
-
-### employee_documents
-- id (PK)
-- employee_id (FK)
-- title
-- document_type
-- file_path
-- file_size
-- mime_type
-- uploaded_at
-- uploaded_by
-
----
-
-## Indexes Created
-
-**employees**:
-- idx_employee_id (employee_id)
-- idx_email (email)
-- idx_employment_status (employment_status)
-- idx_org_dept (organization_id, department_id)
-
----
-
-## Code Statistics
-
-- **Total Lines**: ~3,000+
-- **Python Files**: 29
-- **Models**: 4 (Employee, Document, Organization, Department)
-- **Serializers**: 10
-- **ViewSets**: 3
-- **GraphQL Types**: 4
-
----
-
-## Next Steps
-
-### Immediate (Next Session)
-1. Create test data via Django Admin
-2. Test all CRUD operations
-3. Verify audit logging is working
-4. Test GraphQL queries with real data
-
-### Short-term
-1. Re-enable Keycloak authentication
-2. Implement Neo4j auto-sync
-3. Add Redis caching
-4. Write unit tests
-5. Add API documentation (Swagger/ReDoc)
-
-### Phase 3
-1. Build Next.js web frontend
-2. Integrate with REST/GraphQL APIs
-3. Implement Keycloak authentication on frontend
-4. Create employee management UI
-
----
-
-## Lessons Learned
-
-1. **Docker DNS matters**: Always configure Docker DNS upfront on Windows
-2. **Circular dependencies**: Let Django handle them automatically with two-stage migrations
-3. **Library compatibility**: Check dependencies work together before building
-4. **Development vs Production**: It's okay to disable features temporarily for development
-5. **PowerShell limitations**: Individual exec commands work better than interactive shells
-
----
-
-## Environment
-
-**OS**: Windows 11  
-**Docker**: Docker Desktop 4.x  
-**Python**: 3.11  
-**Django**: 5.0.7  
-**Database**: PostgreSQL 15, MongoDB 7, Neo4j 5, Redis 7  
-
----
-
-## Session Statistics
-
-**Date**: October 24-25, 2025  
-**Start Time**: 01:00 AM IST  
-**End Time**: 03:52 AM IST  
-**Duration**: 2 hours 52 minutes  
-**Files Created**: 29  
-**Lines of Code**: ~3,000  
-**Commits**: Pending  
-**Status**: ✅ Phase 2 Complete  
-
----
-
-## Sign-off
-
-Phase 2 successfully completed. All core backend functionality is working. The system is ready for frontend development (Phase 3) or additional backend features.
-
-**Next Session**: Create comprehensive README and commit to Git.
-
----
-
-**Developer**: Charan Chinnappa  
-**Date**: October 25, 2025, 04:00 AM IST  
-**Phase**: 2 of 5 Complete ✅
-
-# Development Log - Phase 3: Next.js Web Frontend
-
-**Duration**: ~4 hours  
-**Date**: October 25, 2025  
-**Status**: ✅ Completed
-
----
-
-## Overview
-
-Phase 3 focused on building a modern, responsive web frontend using Next.js 14 that connects to the Django REST API built in Phase 2.
-
----
-
-## Technology Stack
-
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **HTTP Client**: Axios
-- **State Management**: React Hooks (useState, useEffect)
-- **Build Tool**: Turbopack (Next.js 14 default)
-
----
-
-## Implementation Details
-
-### 1. Project Setup
-
-**Created Next.js application:**
-npx create-next-app@latest web
-
-**Configuration choices:**
-- ✅ TypeScript
-- ✅ ESLint
-- ✅ Tailwind CSS
-- ❌ src/ directory (using app/ directly)
-- ✅ App Router
-- ❌ Custom import alias
-
-**Installed dependencies:**
-npm install @tanstack/react-query axios zustand lucide-react
-npm install -D @types/node
-
----
-
-### 2. API Client Configuration
-
-**File**: `services/web/lib/api.ts`
-
-Created centralized API client using Axios with:
-- Base URL configuration via environment variables
-- Request/response interceptors
-- Organized API methods by resource (employees, organizations, departments)
-- Error handling with console logging
-
-**API Methods Implemented:**
-- `organizationsApi`: getAll, getById, create, update, delete
-- `employeesApi`: getAll, getById, create, update, delete, search
-- `departmentsApi`: getAll, getById, create, update, delete
-- `healthApi`: check
-
----
-
-### 3. TypeScript Types
-
-**File**: `services/web/types/index.ts`
-
-Defined comprehensive TypeScript interfaces:
-- `Organization` - Complete org structure with metadata
-- `Department` - Department hierarchy support
-- `Employee` - Full employee profile with relationships
-- `PaginatedResponse<T>` - Generic paginated API response
-
----
-
-### 4. Environment Configuration
-
-**Files**:
-- `.env.local` - Next.js environment variables
-- `next.config.ts` - API proxy configuration
-
-**Environment variables:**
-NEXT_PUBLIC_API_URL=http://localhost:8001
-NEXT_PUBLIC_APP_NAME=HR-Lookout
-
-**Next.js config:**
-- API rewrites for `/api/*` → `http://localhost:8001/api/*`
-- Image domain configuration for localhost
-
----
-
-### 5. Application Layout
-
-**File**: `services/web/app/layout.tsx`
-
-**Features:**
-- Global navigation bar with HR-Lookout branding
-- Responsive navigation menu
-- Links to Dashboard, Employees, Organizations
-- Consistent layout across all pages
-- Max-width container for content
-
----
-
-### 6. Dashboard Page
-
-**File**: `services/web/app/page.tsx`
-
-**Features:**
-- Statistics cards showing:
-  - Total organizations count
-  - Total employees count
-  - System status indicator
-- Real-time data fetching from API
-- Loading state with spinner
-- Error handling with user-friendly messages
-- Quick action cards for:
-  - Add Employee
-  - Add Organization
-
-**Key Implementation:**
-- Uses `useEffect` hook for data fetching on mount
-- `useState` for managing statistics and loading states
-- Parallel API calls using `Promise.all`
-- Responsive grid layout (1 col mobile, 2 col tablet, 3 col desktop)
-
----
-
-### 7. Employees Management Page
-
-**File**: `services/web/app/employees/page.tsx`
-
-**Features:**
-- **List View**:
-  - Table with columns: Employee, Email, Job Title, Organization, Status, Actions
-  - Employee avatar with initials
-  - Status badges (ACTIVE/INACTIVE color-coded)
-  - Delete action button
-  - Empty state with helpful message
-
-- **Search Functionality**:
-  - Real-time search bar
-  - Filters by: first name, last name, email, job title, employee ID
-  - Case-insensitive matching
-  - Instant results (no API call needed - client-side filtering)
-
-- **Create Form**:
-  - Toggleable form (show/hide with button)
-  - Fields: Employee ID, Organization (dropdown), First Name, Last Name, Email, Phone, Job Title, Hire Date
-  - Form validation (required fields)
-  - Error handling with user-friendly alerts
-  - Success message on creation
-  - Auto-refresh list after creation
-  - Form reset after successful submission
-
-**Key Implementation:**
-- Two-column responsive grid for form fields
-- Organization dropdown populated from API
-- Hard delete implementation (complete removal from database)
-- Better error display showing validation messages from backend
-- Search query state management with `useState`
-- Filter function using `Array.prototype.filter()`
-
----
-
-### 8. Organizations Management Page
-
-**File**: `services/web/app/organizations/page.tsx`
-
-**Features:**
-- **Grid View**:
-  - Card-based layout (3 columns on desktop)
-  - Organization name and active status badge
-  - Key information: Email, Tax ID, Location, Employee count
-  - Delete action button per card
-
-- **Create Form**:
-  - Toggleable form
-  - Fields: Name, Legal Name, Email, Phone, Address, City, State, Postal Code, Tax ID, Fiscal Year Start
-  - Comprehensive organization information capture
-  - Form validation
-  - Auto-refresh after creation
-
-**Key Implementation:**
-- Responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
-- Card hover effects
-- Empty state with icon and message
-- Two-column form layout
-- Date picker for fiscal year start
-
----
-
-### 9. Styling & UX Improvements
-
-**Global CSS** (`services/web/app/globals.css`):
-
-**Improvements Made:**
-- Fixed input text visibility (dark text color)
-- Enhanced form label readability
-- Proper placeholder text styling
-- Dark mode support for inputs
-- Consistent form element styling across the app
-
-**Key CSS Rules:**
-/* Input text - dark and readable */
+Challenges & Solutions
+Challenge 1: Docker DNS Failure
+
+Problem: Couldn't resolve debian repositories
+
+Solution: Added {"dns": ["8.8.8.8", "8.8.4.4"]} to Docker Desktop settings
+
+Time Lost: 15 minutes
+
+Challenge 2: Circular Dependency
+
+Problem: Employee → Department → Employee (head field)
+
+Solution: Django auto-created two-stage migrations
+
+Time Lost: 10 minutes
+
+Challenge 3: Keycloak Library Incompatibility
+
+Problem: python-keycloak incompatible with httpx
+
+Solution: Disabled authentication for development
+
+Time Lost: 20 minutes
+
+Database Schema Indexes
+idx_employee_id on employees.employee_id
+
+idx_email on employees.email
+
+idx_employment_status on employees.employment_status
+
+idx_org_dept on (organization_id, department_id)
+
+Testing Summary
+Endpoint                |  Method  |  Status  |  Response Time
+------------------------+----------+----------+---------------
+/health/                |  GET     |  ✅ 200   |  ~50ms        
+/api/v1/organizations/  |  GET     |  ✅ 200   |  ~150ms       
+/api/v1/employees/      |  GET     |  ✅ 200   |  ~150ms       
+/graphql/               |  GET     |  ✅ 200   |  ~200ms       
+/admin/                 |  GET     |  ✅ 200   |  ~300ms       
+
+PHASE 3: NEXT.JS WEB FRONTEND
+Completed: October 25, 2025
+Duration: ~4 hours
+
+Technology Stack
+Framework: Next.js 14 (App Router)
+
+Language: TypeScript
+
+Styling: Tailwind CSS
+
+HTTP Client: Axios
+
+State: React Hooks (useState, useEffect)
+
+Build Tool: Turbopack
+
+Project Setup
+npx create-next-app@latest web --typescript --tailwind --app
+npm install axios @tanstack/react-query zustand lucide-react
+
+API Client Configuration
+File: services/web/lib/api.ts
+
+Features:
+
+Centralized axios instance with base URL
+
+Request/response interceptors
+
+Organized methods by resource
+
+Error handling with console logging
+
+API Methods:
+organizationsApi: { getAll, getById, create, update, delete }
+employeesApi: { getAll, getById, create, update, delete, search }
+departmentsApi: { getAll, getById, create, update, delete }
+healthApi: { check }
+
+TypeScript Types
+File: services/web/types/index.ts
+
+Comprehensive interfaces for:
+
+Organization (21 fields)
+
+Department (11 fields with hierarchy)
+
+Employee (19 fields with relationships)
+
+PaginatedResponse<T> (generic pagination)
+
+Pages Implemented
+1. Dashboard (app/page.tsx)
+
+Statistics cards: Organizations, Employees, System Status
+
+Real-time API data fetching
+
+Loading states with spinner
+
+Quick action cards (Add Employee, Add Organization)
+
+Responsive grid (1/2/3 columns)
+
+2. Employees Page (app/employees/page.tsx)
+Features:
+
+Table view: Employee, Email, Job Title, Organization, Status, Actions
+
+Employee avatars with initials
+
+Status badges (ACTIVE/INACTIVE color-coded)
+
+Real-time search (first name, last name, email, job title, employee ID)
+
+Create form (toggleable)
+
+Hard delete with confirmation
+
+Organization dropdown integration
+
+Form Fields:
+
+Employee ID, Organization, First Name, Last Name
+
+Email, Phone, Job Title, Hire Date
+
+Form validation and error handling
+
+3. Organizations Page (app/organizations/page.tsx)
+Features:
+
+Card grid layout (1/2/3 columns responsive)
+
+Organization info: Email, Tax ID, Location, Employee count
+
+Active status badges
+
+Create form with comprehensive fields
+
+Delete with confirmation
+
+Form Fields:
+
+Name, Legal Name, Email, Phone
+
+Address, City, State, Postal Code
+
+Tax ID, Fiscal Year Start
+
+Styling & UX Improvements
+Global CSS (app/globals.css):
+/* Dark text for readability */
 input, select, textarea {
-color: #1f2937 !important;
-font-weight: 500;
+  color: #1f2937 !important;
+  font-weight: 500;
 }
 
-/* Placeholder text - medium gray */
+/* Medium gray placeholders */
 input::placeholder {
-color: #9ca3af !important;
-font-weight: 400;
+  color: #9ca3af !important;
 }
 
-/* Labels - visible and bold */
+/* Visible bold labels */
 label {
-color: #374151 !important;
-font-weight: 500;
+  color: #374151 !important;
+  font-weight: 500;
 }
+Key Features
+✅ Real-time search (client-side filtering)
+✅ Form validation with backend error display
+✅ Responsive design (mobile/tablet/desktop)
+✅ Loading states and empty states
+✅ Hard delete (complete database removal)
+✅ Organization dropdown selection
+✅ Status badges and hover effects
 
----
+API Integration
+CORS configured in Django (CORS_ALLOWED_ORIGINS)
 
-### 10. Backend Integration & CORS
+Environment variables (.env.local)
 
-**Updated**: `HR-Lookout/.env`
+API proxy in next.config.ts
 
-Added CORS configuration for Next.js frontend:
-DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:19006
+Parallel API calls with Promise.all()
 
-**Django settings** (already configured in Phase 2):
-- `CORS_ALLOW_CREDENTIALS = True`
-- Dynamic CORS origins from environment variables
+Challenges & Solutions
+Challenge 1: CORS Errors
 
----
+Solution: Updated .env with http://localhost:3000 origin
 
-## File Structure
+Challenge 2: Soft Delete Issue
 
+Problem: Deleted employees remained in DB
+
+Solution: Modified Django views to use instance.delete()
+
+Challenge 3: Input Text Visibility
+
+Problem: Light text hard to read
+
+Solution: Added CSS with !important for dark text
+
+Challenge 4: Empty Organization Dropdown
+
+Solution: Parallel fetch on page load with Promise.all()
+
+File Structure
 services/web/
 ├── app/
-│ ├── layout.tsx # Root layout with navigation
-│ ├── page.tsx # Dashboard page
-│ ├── globals.css # Global styles
-│ ├── employees/
-│ │ └── page.tsx # Employees management
-│ └── organizations/
-│ └── page.tsx # Organizations management
+│   ├── layout.tsx          # Root layout with navigation
+│   ├── page.tsx            # Dashboard
+│   ├── globals.css         # Global styles
+│   ├── employees/
+│   │   └── page.tsx        # Employees CRUD
+│   └── organizations/
+│       └── page.tsx        # Organizations CRUD
 ├── lib/
-│ └── api.ts # API client & methods
+│   └── api.ts              # API client
 ├── types/
-│ └── index.ts # TypeScript interfaces
-├── public/ # Static assets
-├── .env.local # Environment variables
-├── next.config.ts # Next.js configuration
-├── tailwind.config.ts # Tailwind CSS configuration
-├── tsconfig.json # TypeScript configuration
-└── package.json # Dependencies
-
-
----
-
-## Key Features Implemented
-
-### ✅ Dashboard
-- Real-time statistics from backend API
-- Organization count
-- Employee count
-- System status indicator
-- Quick action cards
-
-### ✅ Employee Management
-- View all employees in table format
-- Create new employees
-- Delete employees (hard delete)
-- Search/filter employees by multiple fields
-- Organization dropdown selection
-- Form validation
-- Error handling with user-friendly messages
-
-### ✅ Organization Management
-- View all organizations in card grid
-- Create new organizations
-- Delete organizations
-- Comprehensive organization details
-- Active/Inactive status badges
-
-### ✅ User Experience
-- Responsive design (mobile, tablet, desktop)
-- Loading states with spinners
-- Empty states with helpful messages
-- Error messages with details
-- Success confirmations
-- Hover effects and transitions
-- Consistent styling across pages
-
----
-
-## Testing & Validation
-
-### Manual Testing Performed
-
-**✅ Dashboard:**
-- Loads correctly with statistics
-- Shows accurate counts from database
-- Quick actions navigate to correct pages
-
-**✅ Employees Page:**
-- Lists all employees correctly
-- Search filters work in real-time
-- Create form validates required fields
-- Organizations populate in dropdown
-- Employee creation succeeds
-- Delete removes employee from list and database
-- Can reuse email after deletion (hard delete working)
-- Error messages display properly
-
-**✅ Organizations Page:**
-- Lists all organizations in cards
-- Create form validates all required fields
-- Organization creation succeeds
-- Delete removes organization
-- Employee count displays correctly
-
-**✅ Navigation:**
-- All nav links work correctly
-- Active page highlighting
-- Responsive menu
-
-**✅ Styling:**
-- Text in inputs is dark and readable
-- Labels are visible
-- Placeholders have good contrast
-- Forms are user-friendly
-- Buttons have hover states
-
----
-
-## Challenges & Solutions
-
-### Challenge 1: CORS Errors
-**Issue**: Browser blocking requests from localhost:3000 to localhost:8001  
-**Solution**: Updated `.env` with proper CORS origins and restarted hr-core service
-
-### Challenge 2: Soft Delete vs Hard Delete
-**Issue**: Deleted employees remained in database (soft delete), preventing email reuse  
-**Solution**: Modified `views.py` to use `instance.delete()` instead of status update
-
-### Challenge 3: Text Visibility in Form Inputs
-**Issue**: Input text was too light and hard to read  
-**Solution**: Added global CSS rules with `!important` to force darker text colors
-
-### Challenge 4: Empty Organization Dropdown
-**Issue**: Organization dropdown was empty when creating employees  
-**Solution**: Added parallel API call to fetch organizations on page load
-
-### Challenge 5: Search Functionality
-**Issue**: Needed to filter employees without additional API calls  
-**Solution**: Implemented client-side filtering using `Array.filter()` with search query state
-
----
-
-## Performance Considerations
-
-- **API Calls**: Optimized with `Promise.all()` for parallel fetching
-- **Client-Side Filtering**: Search implemented without backend calls for instant results
-- **Loading States**: Prevents multiple clicks during API operations
-- **Auto-Reload**: Efficient list refresh after create/delete operations
-- **Code Splitting**: Next.js automatic code splitting per route
-
----
-
-## Files Created/Modified
-
-**New Files: ~15**
-- `services/web/lib/api.ts`
-- `services/web/types/index.ts`
-- `services/web/app/layout.tsx`
-- `services/web/app/page.tsx`
-- `services/web/app/employees/page.tsx`
-- `services/web/app/organizations/page.tsx`
-- `services/web/.env.local`
-- `services/web/next.config.ts`
-- `services/web/app/globals.css` (modified)
-- Plus ~50+ Next.js framework files from `create-next-app`
-
-**Modified Files: 2**
-- `HR-Lookout/.env` (added CORS origins)
-- `services/hr-core/hr_core/apps/employees/views.py` (hard delete)
-
----
-
-## Dependencies Added
+│   └── index.ts            # TypeScript interfaces
+├── .env.local              # Environment variables
+└── next.config.ts          # Next.js config
+Dependencies Added
 {
-"dependencies": {
-"next": "16.0.0",
-"react": "^19.0.0",
-"react-dom": "^19.0.0",
-"axios": "^1.6.0",
-"@tanstack/react-query": "^5.0.0",
-"zustand": "^4.4.0",
-"lucide-react": "^0.300.0"
-},
-"devDependencies": {
-"typescript": "^5",
-"@types/node": "^20",
-"@types/react": "^19",
-"@types/react-dom": "^19",
-"tailwindcss": "^3.4.1",
-"eslint": "^8",
-"eslint-config-next": "16.0.0"
+  "dependencies": {
+    "next": "16.0.0",
+    "react": "^19.0.0",
+    "axios": "^1.6.0",
+    "@tanstack/react-query": "^5.0.0"
+  }
 }
-}
+Time Breakdown
+Project setup: 30 mins
 
----
+API client & types: 30 mins
 
-## API Endpoints Used
-GET /health/
-GET /api/v1/organizations/
-POST /api/v1/organizations/
-DELETE /api/v1/organizations/:id/
-GET /api/v1/employees/
-POST /api/v1/employees/
-DELETE /api/v1/employees/:id/
+Dashboard: 30 mins
 
----
+Employees page: 1 hour
 
-## Next Steps (Phase 4)
+Organizations page: 45 mins
 
-- [ ] React Native mobile app (iOS/Android)
-- [ ] Authentication integration with Keycloak
-- [ ] Employee detail/edit pages
-- [ ] Department management
-- [ ] Advanced search with backend API
-- [ ] Pagination for large datasets
-- [ ] File upload for employee documents
-- [ ] Reports and analytics
+Search functionality: 20 mins
 
----
+Styling: 30 mins
 
-## Lessons Learned
+Bug fixes & testing: 45 mins
 
-1. **CORS Setup**: Always configure CORS before starting frontend work to avoid debugging issues
-2. **TypeScript**: Strong typing catches errors early and improves DX
-3. **Client-Side Filtering**: Good for small datasets, reduces API calls
-4. **Global CSS**: Using `!important` for framework overrides is sometimes necessary
-5. **Error Handling**: User-friendly error messages significantly improve UX
-6. **Hard vs Soft Delete**: Consider data integrity requirements early in design
+Total: ~4 hours
 
----
+PHASE 4: BACKEND REFACTORING + DEPARTMENT CRUD
+Completed: October 28, 2025
+Duration: ~2 hours
 
-## Time Breakdown
+Backend Architecture Refactoring
+1. Department Model Migration
 
-- Project setup & configuration: 30 minutes
-- API client & types: 30 minutes
-- Dashboard implementation: 30 minutes
-- Employees page: 1 hour
-- Organizations page: 45 minutes
-- Search functionality: 20 minutes
-- Styling improvements: 30 minutes
-- Bug fixes & testing: 45 minutes
-- **Total**: ~4 hours
+Moved: Department from organizations.models → employees.models
 
----
+Reason: Better domain organization (departments manage employees)
 
-**Phase 3 Status: ✅ COMPLETE**
+Impact: Fixed circular dependencies, cleaner imports
 
-The web frontend is fully functional with CRUD operations, search, and a polished user interface. All core features are working and tested.
+2. Modular Models Structure
+Created separate model files:
 
+employees/models/employee.py - Employee model
 
+employees/models/department.py - Department model
 
+employees/models/document.py - Document model
+
+employees/models/__init__.py - Aggregator
+
+3. Core App Created
+
+Path: hr_core/apps/core/
+
+Purpose: Shared base models, mixins, utilities
+
+Files: models/base.py, models/mixins.py
+
+4. Fixed Cross-App Imports
+Updated imports in:
+
+employees/serializers.py
+
+employees/views.py
+
+employees/admin.py
+
+organizations/serializers.py
+
+organizations/views.py
+
+organizations/admin.py
+
+config/settings.py
+
+config/urls.py
+
+Employee Model Enhancements
+Added Fields:
+# Financial
+salary = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+# Emergency Contact
+emergency_contact_name = models.CharField(max_length=200, blank=True)
+emergency_contact_phone = models.CharField(max_length=20, blank=True)
+emergency_contact_relationship = models.CharField(max_length=100, blank=True)
+Removed Fields:
+
+preferred_name - Redundant with first_name
+
+personal_email - Privacy concerns
+
+mobile - Duplicate of phone
+
+bio - Moved to future profile module
+
+profile_picture - Will use dedicated media service
+
+keycloak_user_id - Moved to auth service
+
+employment_type - Simplified status field
+
+Database Schema Updates
+Step 1: Fake Conflicting Migrations
+docker-compose exec hr-core python manage.py migrate employees 0002 --fake
+docker-compose exec hr-core python manage.py migrate organizations --fake
+
+Step 2: Add Salary Column via SQL
+from django.db import connection
+with connection.cursor() as cursor:
+    cursor.execute("""
+        ALTER TABLE employees 
+        ADD COLUMN salary NUMERIC(12, 2);
+    """)
+Step 3: Drop Obsolete Columns
+with connection.cursor() as cursor:
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS preferred_name;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS personal_email;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS mobile;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS bio;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS profile_picture;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS keycloak_user_id;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS employment_type;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS created_by;")
+    cursor.execute("ALTER TABLE employees DROP COLUMN IF EXISTS updated_by;")
+
+Frontend - Complete Department CRUD
+File: services/web/app/departments/page.tsx
+
+Features Implemented:
+
+1. Department List Table
+
+Columns: Name, Code, Organization, Cost Center, Employees, Status, Actions
+
+Department icon with description
+
+Status badges (Active/Inactive color-coded)
+
+Employee count with user icon
+
+Hover effects on rows
+
+2. Search & Filters
+// Real-time search
+<input 
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  placeholder="Search departments by name or code..."
+/>
+
+// Organization filter
+<select 
+  value={selectedOrg}
+  onChange={(e) => setSelectedOrg(e.target.value)}
+>
+  <option value="">All Organizations</option>
+  {organizations.map(org => (
+    <option value={org.id}>{org.name}</option>
+  ))}
+</select>
+
+3. Create/Edit Modal Form
+
+Modal overlay with dark background
+
+Form fields:
+
+Organization (dropdown, required)
+
+Department Name (text, required)
+
+Department Code (text, required)
+
+Description (textarea, optional)
+
+Cost Center (text, optional)
+
+Active Status (checkbox, default true)
+
+Form validation
+
+Create/Update buttons
+
+Cancel button clears state
+
+4. CRUD Operations
+// Create
+const handleSubmit = async (e) => {
+  await departmentsApi.create(formData);
+  alert('Department created!');
+  fetchDepartments();
+};
+
+// Update
+await departmentsApi.update(id, formData);
+
+// Delete with confirmation
+const handleDelete = async (id, name) => {
+  if (!confirm(`Delete "${name}"?`)) return;
+  await departmentsApi.delete(id);
+  fetchDepartments();
+};
+
+5. State Management
+const [departments, setDepartments] = useState<Department[]>([]);
+const [organizations, setOrganizations] = useState<Organization[]>([]);
+const [loading, setLoading] = useState(true);
+const [showModal, setShowModal] = useState(false);
+const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+const [searchTerm, setSearchTerm] = useState('');
+const [selectedOrg, setSelectedOrg] = useState<number | ''>('');
+Files Modified
+Backend (8 files):
+
+config/settings.py - Added core app
+
+config/urls.py - Updated routing
+
+employees/models/__init__.py - Model aggregator
+
+employees/models/department.py - Moved from organizations
+
+employees/models/employee.py - Added fields
+
+employees/serializers.py - Updated imports
+
+employees/views.py - Updated imports
+
+employees/admin.py - Updated imports
+
+Frontend (3 files):
+
+app/departments/page.tsx - Complete rewrite with CRUD
+
+package.json - Added react-icons
+
+package-lock.json - Dependency lock
+
+Testing Completed
+Backend API Tests:
+# List departments
+curl http://localhost:8001/api/v1/departments/
+
+# Create department
+$dept = @{
+    name = "Human Resources"
+    code = "HR"
+    organization = 1
+    is_active = $true
+} | ConvertTo-Json
+Invoke-WebRequest -Uri "http://localhost:8001/api/v1/departments/" -Method POST -Body $dept -ContentType "application/json"
+
+# Update department
+Invoke-WebRequest -Uri "http://localhost:8001/api/v1/departments/1/" -Method PUT -Body $deptUpdate -ContentType "application/json"
+
+# Delete department
+Invoke-WebRequest -Uri "http://localhost:8001/api/v1/departments/1/" -Method DELETE
+Frontend Tests:
+
+✅ Department list loads correctly
+
+✅ Search filters in real-time
+
+✅ Organization filter works
+
+✅ Create form validates required fields
+
+✅ Department creation succeeds
+
+✅ Edit loads existing data
+
+✅ Update saves changes
+
+✅ Delete removes from list
+
+✅ Modal opens/closes properly
+
+✅ Form resets after submission
+
+Key Decisions
+Decision 1: Move Department to Employees App
+
+Reason: Departments manage employees, not organizations
+
+Benefit: Cleaner domain boundaries, fewer circular deps
+
+Trade-off: Migration complexity (worth it for long-term maintainability)
+
+Decision 2: Manual SQL for Schema Changes
+
+Reason: Avoid migration conflicts after faking
+
+Benefit: Direct control over database state
+
+Trade-off: Not trackable in migrations (documented in dev log)
+
+Decision 3: Remove Obsolete Fields
+
+Reason: Simplify model, improve performance
+
+Benefit: Cleaner codebase, faster queries
+
+Trade-off: Data loss (acceptable for development phase)
+
+CURRENT STATUS
+✅ What's Working
+8 Docker services running (Traefik, PostgreSQL, MongoDB, Redis, Neo4j, Keycloak, MinIO, hr-core)
+
+Backend REST + GraphQL APIs fully functional
+
+Frontend with full CRUD for Organizations, Employees, Departments
+
+Search and filtering on all pages
+
+Database: 1 Organization, 6 Departments, 3 Employees
+
+All migrations applied successfully
+
+Dashboard showing accurate real-time counts
+
+⏳ Pending/TODO
+Re-enable Keycloak authentication
+
+Implement Neo4j auto-sync for org charts
+
+Add Redis caching layer
+
+Write unit tests (backend + frontend)
+
+API documentation (Swagger/ReDoc)
+
+Rate limiting and throttling
+
+Pagination for large datasets
+
+Employee detail/edit pages
+
+File upload for documents (MinIO integration)
+
+NEXT STEPS (PHASE 5 OPTIONS)
+Option 1: Authentication & Authorization ⭐ Recommended
+Keycloak integration (fix library compatibility)
+
+JWT token management
+
+Role-based access control (6 roles configured)
+
+Protected routes on frontend
+
+User profile management
+
+Login/logout flow
+
+Option 2: Document Management
+File upload for employees
+
+MinIO integration (3 buckets ready)
+
+Document categories (contracts, certificates, etc.)
+
+Version control
+
+Download/preview functionality
+
+Option 3: Advanced Features
+Employee profiles with photo upload
+
+Department hierarchy visualization
+
+Reporting dashboard with charts
+
+Export to Excel/PDF
+
+Audit log viewer (MongoDB)
+
+Org chart visualization (Neo4j)
