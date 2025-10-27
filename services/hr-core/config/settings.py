@@ -26,13 +26,12 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'corsheaders',
-    'django_filters',
     'graphene_django',
     
     # Local apps
-    'hr_core.apps.employees',
+    'hr_core.apps.core',  # ← ADD THIS LINE (Core app must be first!)
     'hr_core.apps.organizations',
-    'hr_core.apps.audit',
+    'hr_core.apps.employees',
     'hr_core.apps.authentication',
 ]
 

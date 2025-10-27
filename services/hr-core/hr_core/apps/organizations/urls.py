@@ -1,15 +1,12 @@
-"""
-Organization app URL configuration
-"""
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 
+# Create router and register viewsets
 router = DefaultRouter()
 router.register(r'', views.OrganizationViewSet, basename='organization')
-router.register(r'departments', views.DepartmentViewSet, basename='department')
 
+# URL patterns
 urlpatterns = [
     path('', include(router.urls)),
 ]

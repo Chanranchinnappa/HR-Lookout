@@ -1,197 +1,162 @@
-"""
-Employee REST API views
-"""
-
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q
-
-from .models import Employee, Document
+from .models import Employee, Department, Document
 from .serializers import (
     EmployeeListSerializer,
     EmployeeDetailSerializer,
-    EmployeeCreateUpdateSerializer,
-    DocumentSerializer,
+    DepartmentSerializer,
+    DocumentSerializer
 )
-from hr_core.apps.audit.logger import get_audit_logger
+
+
+class DepartmentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Department CRUD operations
+    Supports filtering by organization, is_active
+    """
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['organization', 'is_active', 'head']
+    search_fields = ['name', 'code', 'description']
+    ordering_fields = ['name', 'code', 'created_at']
+    ordering = ['name']
+    
+    def get_queryset(self):
+        """
+        Filter departments by organization if query param provided
+        """
+        queryset = super().get_queryset()
+        
+        # Filter by organization if provided
+        org_id = self.request.query_params.get('organization', None)
+        if org_id:
+            queryset = queryset.filter(organization_id=org_id)
+        
+        return queryset.select_related('organization', 'head')
+    
+    @action(detail=True, methods=['get'])
+    def employees(self, request, pk=None):
+        """
+        Get all employees in this department
+        Endpoint: /api/v1/departments/{id}/employees/
+        """
+        department = self.get_object()
+        employees = department.employees.filter(employment_status='ACTIVE')
+        serializer = EmployeeListSerializer(employees, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def check_delete_permission(self, request, pk=None):
+        """
+        Check if department can be deleted
+        Endpoint: /api/v1/departments/{id}/check_delete_permission/
+        """
+        department = self.get_object()
+        # For now, return basic info - will enhance with user permissions later
+        can_delete = department.employee_count == 0
+        return Response({
+            'can_delete': can_delete,
+            'employee_count': department.employee_count,
+            'message': f"{department.employee_count} employees assigned" if not can_delete else "No employees assigned"
+        })
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Employee CRUD operations
-    
-    Endpoints:
-    - GET /api/v1/employees/ - List all employees
-    - POST /api/v1/employees/ - Create new employee
-    - GET /api/v1/employees/{id}/ - Get employee details
-    - PUT/PATCH /api/v1/employees/{id}/ - Update employee
-    - DELETE /api/v1/employees/{id}/ - Delete employee
-    - GET /api/v1/employees/me/ - Get current user's employee record
-    - GET /api/v1/employees/search/ - Search employees
+    Uses different serializers for list and detail views
     """
-    
-    #permission_classes = [IsAuthenticated]
+    queryset = Employee.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['employment_status', 'employment_type', 'organization', 'department']
-    search_fields = ['first_name', 'last_name', 'email', 'employee_id', 'job_title']
-    ordering_fields = ['last_name', 'first_name', 'hire_date', 'employee_id']
-    ordering = ['last_name', 'first_name']
+    filterset_fields = ['organization', 'department', 'employment_status', 'manager']
+    search_fields = ['employee_id', 'first_name', 'last_name', 'email', 'job_title']
+    ordering_fields = ['employee_id', 'first_name', 'last_name', 'hire_date']
+    ordering = ['employee_id']
+    
+    def get_serializer_class(self):
+        """Use detailed serializer for retrieve, list serializer for list"""
+        if self.action == 'retrieve':
+            return EmployeeDetailSerializer
+        return EmployeeListSerializer
     
     def get_queryset(self):
         """
-        Filter queryset based on user permissions
+        Optimize queries with select_related
+        Filter by organization if provided
         """
-        queryset = Employee.objects.select_related(
-            'organization', 'department', 'manager'
-        ).prefetch_related('direct_reports')
+        queryset = super().get_queryset()
         
-        # Apply role-based filtering
-        user = self.request.user
+        # Optimize queries
+        queryset = queryset.select_related('organization', 'department', 'manager')
         
-        # Admins see all employees
-        if hasattr(user, 'is_admin') and user.is_admin:
-            return queryset
+        # Filter by organization if provided
+        org_id = self.request.query_params.get('organization', None)
+        if org_id:
+            queryset = queryset.filter(organization_id=org_id)
         
-        # Managers see their organization's employees
-        if hasattr(user, 'is_manager') and user.is_manager:
-            # TODO: Filter by user's organization
-            return queryset
-        
-        # Regular employees see only active employees
-        return queryset.filter(employment_status='ACTIVE')
-    
-    def get_serializer_class(self):
-        """
-        Return appropriate serializer based on action
-        """
-        if self.action == 'list':
-            return EmployeeListSerializer
-        elif self.action in ['create', 'update', 'partial_update']:
-            return EmployeeCreateUpdateSerializer
-        return EmployeeDetailSerializer
-    
-    def perform_create(self, serializer):
-        """
-        Create employee with audit logging
-        """
-        employee = serializer.save(created_by=self.request.user.id)
-        
-        # Log to audit
-        audit_logger = get_audit_logger()
-        audit_logger.log(
-            action='CREATE',
-            user_id=self.request.user.id,
-            resource_type='Employee',
-            resource_id=str(employee.id),
-            metadata={'employee_id': employee.employee_id},
-            request=self.request
-        )
-    
-    def perform_update(self, serializer):
-        """
-        Update employee with audit logging
-        """
-        old_data = serializer.instance.__dict__.copy()
-        employee = serializer.save(updated_by=self.request.user.id)
-        new_data = employee.__dict__
-        
-        # Calculate changes
-        changes = {
-            'before': {k: old_data[k] for k in old_data if old_data[k] != new_data.get(k)},
-            'after': {k: new_data[k] for k in old_data if old_data[k] != new_data.get(k)}
-        }
-        
-        # Log to audit
-        audit_logger = get_audit_logger()
-        audit_logger.log(
-            action='UPDATE',
-            user_id=self.request.user.id,
-            resource_type='Employee',
-            resource_id=str(employee.id),
-            changes=changes,
-            request=self.request
-        )
-    
-    def destroy(self, request, *args, **kwargs):
-        """Hard delete (permanent removal)"""
-        instance = self.get_object()
-        instance.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-        
-        # Log to audit
-        audit_logger = get_audit_logger()
-        audit_logger.log(
-            action='DELETE',
-            user_id=self.request.user.id,
-            resource_type='Employee',
-            resource_id=str(instance.id),
-            request=self.request
-        )
-    
-    @action(detail=False, methods=['get'])
-    def me(self, request):
-        """
-        Get current user's employee record
-        """
-        try:
-            employee = Employee.objects.get(keycloak_user_id=request.user.id)
-            serializer = EmployeeDetailSerializer(employee)
-            return Response(serializer.data)
-        except Employee.DoesNotExist:
-            return Response(
-                {'error': 'Employee record not found for current user'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-    
-    @action(detail=False, methods=['get'])
-    def search(self, request):
-        """
-        Advanced employee search
-        """
-        query = request.query_params.get('q', '')
-        
-        if not query:
-            return Response({'error': 'Search query required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        queryset = self.get_queryset().filter(
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query) |
-            Q(email__icontains=query) |
-            Q(employee_id__icontains=query) |
-            Q(job_title__icontains=query)
-        )
-        
-        serializer = EmployeeListSerializer(queryset, many=True)
-        return Response(serializer.data)
+        return queryset
     
     @action(detail=True, methods=['get'])
     def documents(self, request, pk=None):
         """
-        Get all documents for an employee
+        Get all documents for this employee
+        Endpoint: /api/v1/employees/{id}/documents/
         """
         employee = self.get_object()
         documents = employee.documents.all()
         serializer = DocumentSerializer(documents, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def direct_reports(self, request, pk=None):
+        """
+        Get all employees reporting to this employee
+        Endpoint: /api/v1/employees/{id}/direct_reports/
+        """
+        employee = self.get_object()
+        reports = employee.direct_reports.filter(employment_status='ACTIVE')
+        serializer = EmployeeListSerializer(reports, many=True)
+        return Response(serializer.data)
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for employee documents
+    ViewSet for Document CRUD operations
     """
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['employee', 'document_type']
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['employee', 'organization', 'document_type', 'is_verified']
+    search_fields = ['title', 'description', 'employee__first_name', 'employee__last_name']
+    ordering_fields = ['created_at', 'title']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        """Optimize queries"""
+        queryset = super().get_queryset()
+        return queryset.select_related('employee', 'organization', 'uploaded_by', 'verified_by')
     
     def perform_create(self, serializer):
+        """Set uploaded_by to current user when creating"""
+        # For now, save without user - will add when authentication is implemented
+        serializer.save()
+    
+    @action(detail=True, methods=['post'])
+    def verify(self, request, pk=None):
         """
-        Create document with user tracking
+        Verify a document
+        Endpoint: /api/v1/documents/{id}/verify/
         """
-        serializer.save(uploaded_by=self.request.user.id)
+        document = self.get_object()
+        from django.utils import timezone
+        
+        document.is_verified = True
+        document.verified_at = timezone.now()
+        # Will set verified_by when authentication is implemented
+        document.save()
+        
+        serializer = self.get_serializer(document)
+        return Response(serializer.data)

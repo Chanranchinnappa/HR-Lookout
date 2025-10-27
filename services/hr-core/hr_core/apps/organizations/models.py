@@ -1,108 +1,61 @@
-"""
-Organization and Department models
-"""
-
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 
 class Organization(models.Model):
     """
-    Organization/Company entity
+    Organization model - represents companies/entities using the system
+    This is the top-level tenant model for multi-tenancy
     """
+    name = models.CharField(max_length=200, help_text="Organization name")
+    legal_name = models.CharField(max_length=200, help_text="Legal/registered name")
     
-    id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255, unique=True)
-    legal_name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True, help_text="Organization contact email")
+    phone = models.CharField(max_length=20, blank=True, help_text="Phone number")
+    website = models.URLField(blank=True, help_text="Website URL")
     
-    # Contact Information
-    email = models.EmailField()
-    phone = models.CharField(max_length=20, blank=True, null=True)
-    website = models.URLField(blank=True, null=True)
+    # Address fields
+    address_line1 = models.CharField(max_length=255, help_text="Address line 1")
+    address_line2 = models.CharField(max_length=255, blank=True, help_text="Address line 2")
+    city = models.CharField(max_length=100, help_text="City")
+    state = models.CharField(max_length=100, help_text="State/Province")
+    postal_code = models.CharField(max_length=20, help_text="Postal/ZIP code")
+    country = models.CharField(max_length=100, default='United States', help_text="Country")
     
-    # Address
-    address_line1 = models.CharField(max_length=255)
-    address_line2 = models.CharField(max_length=255, blank=True, null=True)
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
-    country = models.CharField(max_length=100, default='United States')
+    # Registration details
+    tax_id = models.CharField(max_length=50, unique=True, help_text="Tax ID/EIN")
+    registration_number = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Business registration number"
+    )
     
-    # Tax & Legal
-    tax_id = models.CharField(max_length=50, unique=True)
-    registration_number = models.CharField(max_length=100, blank=True, null=True)
-    
-    # Settings
-    fiscal_year_start = models.DateField()
-    currency = models.CharField(max_length=3, default='USD')
-    timezone = models.CharField(max_length=50, default='UTC')
-    
-    # Logo
-    logo_url = models.CharField(max_length=500, blank=True, null=True)
+    # Operational details
+    fiscal_year_start = models.DateField(help_text="Fiscal year start date")
+    currency = models.CharField(max_length=3, default='USD', help_text="Currency code (USD, EUR, INR, etc.)")
+    timezone = models.CharField(max_length=50, default='UTC', help_text="Timezone")
     
     # Status
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, help_text="Is organization active")
     
-    # Metadata
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'organizations'
         ordering = ['name']
+        verbose_name = 'Organization'
+        verbose_name_plural = 'Organizations'
     
     def __str__(self):
         return self.name
-
-
-class Department(models.Model):
-    """
-    Department within an organization
-    """
     
-    id = models.AutoField(primary_key=True)
-    organization = models.ForeignKey(
-        Organization,
-        on_delete=models.CASCADE,
-        related_name='departments'
-    )
+    @property
+    def employee_count(self):
+        """Get total number of employees in this organization"""
+        return self.employee_set.count()
     
-    name = models.CharField(max_length=255)
-    code = models.CharField(max_length=50)
-    description = models.TextField(blank=True, null=True)
-    
-    # Hierarchy
-    parent_department = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='sub_departments'
-    )
-    
-    # Head of Department
-    head = models.ForeignKey(
-        'employees.Employee',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='headed_departments'
-    )
-    
-    # Cost Center
-    cost_center = models.CharField(max_length=50, blank=True, null=True)
-    
-    # Status
-    is_active = models.BooleanField(default=True)
-    
-    # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'departments'
-        ordering = ['name']
-        unique_together = [['organization', 'code']]
-    
-    def __str__(self):
-        return f"{self.name} ({self.organization.name})"
+    @property
+    def department_count(self):
+        """Get total number of departments in this organization"""
+        return self.department_set.count()

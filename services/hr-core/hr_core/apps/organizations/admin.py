@@ -1,63 +1,32 @@
-"""
-Django admin for Organization app
-"""
-
 from django.contrib import admin
-from .models import Organization, Department
+from .models import Organization
 
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    """Admin interface for Organization"""
-    
-    list_display = ['name', 'legal_name', 'city', 'country', 'is_active']
-    list_filter = ['is_active', 'country']
-    search_fields = ['name', 'legal_name', 'tax_id']
-    readonly_fields = ['created_at', 'updated_at']
+    list_display = ['name', 'legal_name', 'email', 'city', 'country', 'is_active', 'employee_count', 'department_count']
+    list_filter = ['is_active', 'country', 'currency']
+    search_fields = ['name', 'legal_name', 'email', 'tax_id']
+    readonly_fields = ['created_at', 'updated_at', 'employee_count', 'department_count']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'legal_name', 'is_active')
-        }),
-        ('Contact Information', {
-            'fields': ('email', 'phone', 'website')
+            'fields': ('name', 'legal_name', 'email', 'phone', 'website')
         }),
         ('Address', {
             'fields': ('address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country')
         }),
-        ('Legal & Tax', {
+        ('Registration', {
             'fields': ('tax_id', 'registration_number')
         }),
-        ('Settings', {
-            'fields': ('fiscal_year_start', 'currency', 'timezone', 'logo_url')
+        ('Operational', {
+            'fields': ('fiscal_year_start', 'currency', 'timezone', 'is_active')
         }),
-        ('Metadata', {
-            'fields': ('created_at', 'updated_at'),
+        ('Statistics', {
+            'fields': ('employee_count', 'department_count'),
             'classes': ('collapse',)
         }),
-    )
-
-
-@admin.register(Department)
-class DepartmentAdmin(admin.ModelAdmin):
-    """Admin interface for Department"""
-    
-    list_display = ['name', 'code', 'organization', 'head', 'is_active']
-    list_filter = ['is_active', 'organization']
-    search_fields = ['name', 'code']
-    readonly_fields = ['created_at', 'updated_at']
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('organization', 'name', 'code', 'description', 'is_active')
-        }),
-        ('Hierarchy', {
-            'fields': ('parent_department', 'head')
-        }),
-        ('Financial', {
-            'fields': ('cost_center',)
-        }),
-        ('Metadata', {
+        ('System', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
