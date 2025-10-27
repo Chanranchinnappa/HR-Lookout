@@ -44,9 +44,9 @@ HR-Lookout is an enterprise-grade HRIS designed to streamline HR operations, emp
 
 HR-Lookout/
 ├── services/
-│ ├── hr-core/ # Django REST backend
-│ └── web/ # Next.js frontend
-├── platforms/ # Future mobile apps
+│   └── hr-core/          # Django REST backend
+├── platforms/
+│   └── web/              # Next.js frontend  
 ├── packages/ # Shared libraries
 └── infra/
 └── docker/ # Docker configurations
