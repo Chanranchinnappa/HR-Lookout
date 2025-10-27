@@ -1,3 +1,5 @@
+//services/web/lib/api.ts
+
 import axios from 'axios';
 
 // API Base URL
@@ -31,7 +33,7 @@ export const organizationsApi = {
 
 // Employee API
 export const employeesApi = {
-  getAll: () => apiClient.get('/employees/'),
+  getAll: (params?: any) => apiClient.get('/employees/', { params }),
   getById: (id: number) => apiClient.get(`/employees/${id}/`),
   create: (data: any) => apiClient.post('/employees/', data),
   update: (id: number, data: any) => apiClient.put(`/employees/${id}/`, data),
@@ -39,13 +41,13 @@ export const employeesApi = {
   search: (query: string) => apiClient.get(`/employees/search/?q=${query}`),
 };
 
-// Department API
+// Department API - ✅ UPDATED ENDPOINTS
 export const departmentsApi = {
-  getAll: () => apiClient.get('/organizations/departments/'),
-  getById: (id: number) => apiClient.get(`/organizations/departments/${id}/`),
-  create: (data: any) => apiClient.post('/organizations/departments/', data),
-  update: (id: number, data: any) => apiClient.put(`/organizations/departments/${id}/`, data),
-  delete: (id: number) => apiClient.delete(`/organizations/departments/${id}/`),
+  getAll: (params?: any) => apiClient.get('/departments/', { params }),
+  getById: (id: number) => apiClient.get(`/departments/${id}/`),
+  create: (data: any) => apiClient.post('/departments/', data),
+  update: (id: number, data: any) => apiClient.put(`/departments/${id}/`, data),
+  delete: (id: number) => apiClient.delete(`/departments/${id}/`),
 };
 
 // Health Check API
