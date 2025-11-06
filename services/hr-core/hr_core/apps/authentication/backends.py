@@ -14,6 +14,7 @@ class KeycloakUser:
     """
     Custom user object to represent Keycloak user
     """
+    
     def __init__(self, token_payload):
         self.id = token_payload.get('sub')
         self.username = token_payload.get('preferred_username', '')
@@ -25,6 +26,9 @@ class KeycloakUser:
         self.is_authenticated = True
         self.is_anonymous = False
         self.token_payload = token_payload
+        
+        # Extract organization_id from custom attributes if present
+        self._organization_id = token_payload.get('organization_id')
     
     def __str__(self):
         return self.username or self.email
@@ -43,11 +47,44 @@ class KeycloakUser:
     
     @property
     def is_admin(self):
+        """Generic admin check (for backward compatibility)"""
         return self.has_role('hr_admin')
     
     @property
     def is_manager(self):
+        """Check if user is manager or admin"""
         return self.has_any_role(['hr_admin', 'hr_manager'])
+    
+    # NEW: Properties for permission classes compatibility
+    @property
+    def is_super_admin(self):
+        """Check if user is super admin (cross-tenant access)"""
+        return self.has_role('super_admin')
+    
+    @property
+    def is_org_admin(self):
+        """Check if user is organization admin"""
+        return self.has_any_role(['hr_admin', 'org_admin'])
+    
+    @property
+    def organization_id(self):
+        """Get user's organization ID from token claims"""
+        return self._organization_id
+    
+    def to_dict(self):
+        """Convert user object to dictionary for API responses"""
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'roles': self.roles,
+            'groups': self.groups,
+            'is_super_admin': self.is_super_admin,
+            'is_org_admin': self.is_org_admin,
+            'organization_id': self.organization_id,
+        }
 
 
 class KeycloakAuthentication(authentication.BaseAuthentication):
@@ -76,7 +113,6 @@ class KeycloakAuthentication(authentication.BaseAuthentication):
         try:
             # Extract token from "Bearer <token>"
             auth_type, token = auth_header.split(' ', 1)
-            
             if auth_type.lower() != 'bearer':
                 return None
             

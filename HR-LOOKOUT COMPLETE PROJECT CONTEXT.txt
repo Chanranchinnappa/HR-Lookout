@@ -1,0 +1,448 @@
+# Navigate to project root
+cd "C:\Users\Charan Chinnappa Pm\Projects\HR-Lookout"
+
+# Create the context file
+@"
+# 🎯 HR-LOOKOUT COMPLETE PROJECT CONTEXT
+**For Next Thread | Updated: October 28, 2025, 3:00 AM IST**
+
+---
+
+## **📋 CRITICAL: READ THIS FIRST**
+
+**Project:** HR-Lookout - Enterprise HRIS Platform  
+**Developer:** Charan Chinnappa P M  
+**Status:** Phase 4 Complete (80% MVP Ready)  
+**GitHub:** https://github.com/Chanranchinnappa/HR-Lookout.git (Private)  
+**Local Path:** C:\Users\Charan Chinnappa Pm\Projects\HR-Lookout  
+
+**Current Session End:** October 28, 2025, 3:00 AM IST  
+**Next Phase:** Phase 5 - Authentication & Authorization (Keycloak Integration)  
+
+---
+
+## **🔥 QUICK START FOR AI ASSISTANT**
+
+Before responding to any request:
+1. ✅ Verify all 8 Docker services are running
+2. ✅ Check git status is clean
+3. ✅ Confirm frontend (localhost:3000) and backend (localhost:8001) accessible
+4. ✅ Read the "How Charan Works" section below
+5. ✅ Always provide complete files, not snippets
+6. ✅ Use PowerShell commands, not bash
+
+---
+
+## **👨‍💻 HOW CHARAN WORKS** ⭐ CRITICAL
+
+### **Communication Style**
+- **Prefers Complete Files:** Always provide full file contents, never partial snippets
+- **Step-by-Step Commands:** Give exact PowerShell commands in sequence
+- **Wants to See Files First:** Ask Charan to share current file contents before suggesting changes
+- **Values Architecture:** Cares deeply about proper structure and best practices
+- **Detailed Explanations:** Wants to know *why* something is done, not just *how*
+- **Verification:** Always wants to test after changes
+- **Documentation First:** Maintains detailed logs and README files
+
+### **Technical Environment**
+- **OS:** Windows 11
+- **Terminal:** PowerShell (NOT bash)
+- **IDE:** VS Code
+- **Package Managers:** npm (frontend), pip (backend), pnpm (monorepo)
+
+### **Common Commands**
+\`\`\`powershell
+# Navigate
+cd \"C:\Users\Charan Chinnappa Pm\Projects\HR-Lookout\"
+
+# Docker
+docker-compose up -d
+docker-compose ps
+docker logs <container> -f
+
+# Frontend
+cd platforms\web
+npm run dev
+
+# Git
+git status
+git add -A
+git commit -m \"message\"
+git push origin main
+\`\`\`
+
+---
+
+## **📊 PROJECT OVERVIEW**
+
+### **What Is HR-Lookout?**
+Enterprise-grade Human Resources Information System (HRIS) built with:
+- **Backend:** Django 5.0.7 + REST Framework + GraphQL
+- **Frontend:** Next.js 16 + TypeScript + Tailwind CSS
+- **Infrastructure:** Docker Compose with 8 microservices
+- **Databases:** PostgreSQL (primary), MongoDB (audit), Neo4j (org charts), Redis (cache)
+- **Auth:** Keycloak (configured, not yet integrated)
+- **Storage:** MinIO (3 buckets ready)
+
+### **Architecture: Monorepo Structure**
+\`\`\`
+HR-Lookout/
+├── services/
+│   └── hr-core/              # Django backend (:8001)
+├── platforms/
+│   └── web/                  # Next.js frontend (:3000)
+├── packages/                 # Shared libs (future)
+├── infra/
+│   └── docker/               # Docker configs
+├── .env                      # All credentials
+├── docker-compose.yml        # Orchestration
+├── pnpm-workspace.yaml       # Monorepo config
+└── development_log.txt       # Session logs
+\`\`\`
+
+---
+
+## **🎯 CURRENT STATUS**
+
+### **Completed Phases**
+- ✅ **Phase 0:** Monorepo Setup (Oct 24)
+- ✅ **Phase 1:** Docker Infrastructure (Oct 25)
+- ✅ **Phase 2:** Django Backend MVP (Oct 25)
+- ✅ **Phase 3:** Next.js Frontend MVP (Oct 25)
+- ✅ **Phase 4:** Department CRUD + Refactoring (Oct 28)
+
+### **What's Working Right Now**
+✅ **8 Docker Services Running:**
+- Traefik (API Gateway) - :80, :8080
+- PostgreSQL (Primary DB) - :5432
+- MongoDB (Audit Logs) - :27017
+- Redis (Caching) - :6379
+- Neo4j (Org Charts) - :7474, :7687
+- Keycloak (Auth) - :8180
+- MinIO (Storage) - :9000, :9001
+- hr-core (Backend API) - :8001
+
+✅ **Frontend Pages (http://localhost:3000):**
+- Dashboard with real-time stats
+- Organizations CRUD (card grid view)
+- Employees CRUD (table view with search)
+- Departments CRUD (table view with filters)
+
+✅ **Backend APIs (http://localhost:8001):**
+- REST: \`/api/v1/\` (organizations, employees, departments)
+- GraphQL: \`/graphql/\` (nested queries)
+- Admin: \`/admin/\` (Django admin panel)
+- Health: \`/health/\` (service status)
+
+✅ **Database Contents:**
+- 1 Organization: Tech Corp
+- 6 Departments: Engineering, Marketing, Sales, HR, Finance, IT
+- 3 Employees with proper department assignments
+
+### **What's NOT Yet Implemented**
+⏳ Keycloak authentication (disabled for development)  
+⏳ Neo4j auto-sync (framework ready)  
+⏳ Redis caching (configured, not utilized)  
+⏳ Unit tests  
+⏳ API documentation (Swagger)  
+⏳ Rate limiting  
+⏳ Pagination  
+⏳ File uploads (MinIO integration)  
+
+---
+
+## **🗄️ DATABASE SCHEMA**
+
+### **PostgreSQL Tables**
+
+**organizations_organization:**
+- id, name (unique), legal_name
+- email, phone, website
+- address fields (6 fields)
+- tax_id (unique), registration_number
+- fiscal_year_start, currency, timezone
+- logo_url, is_active
+- created_at, updated_at
+
+**employees_department:**
+- id, organization_id (FK)
+- parent_department_id (FK self)
+- name, code, description
+- head_id (FK employees, nullable)
+- cost_center, is_active
+- created_at, updated_at
+
+**employees_employee:**
+- id, employee_id (unique)
+- organization_id (FK), department_id (FK)
+- manager_id (FK self)
+- first_name, last_name, middle_name
+- date_of_birth
+- email (unique), phone
+- address fields (6 fields)
+- job_title, employment_status
+- hire_date, termination_date
+- salary (decimal 12,2)
+- emergency_contact_name, phone, relationship
+- created_at, updated_at
+
+**Indexes on employees:**
+- idx_employee_id, idx_email, idx_employment_status
+- idx_org_dept (composite)
+
+**employees_employeedocument:**
+- id, employee_id (FK)
+- title, document_type, file_path
+- file_size, mime_type
+- uploaded_at, uploaded_by
+
+### **MongoDB**
+**Database:** hr_lookout_audit  
+**Collections:** audit_logs, error_logs, system_events  
+**Purpose:** Track all API operations with user, action, timestamp
+
+### **Neo4j**
+**Database:** hr_lookout_graph  
+**Status:** Framework ready, auto-sync pending  
+**Purpose:** Org chart visualization with REPORTS_TO relationships
+
+---
+
+## **📝 LAST SESSION SUMMARY (Oct 27-28)**
+
+### **What We Did (3 hours)**
+
+1. **Department CRUD Implementation ✅**
+   - Complete frontend page with table, search, filters
+   - Modal forms for create/edit operations
+   - Organization dropdown integration
+   - Delete with confirmation
+   - Installed react-icons package
+
+2. **Backend Refactoring ✅**
+   - Moved Department model from organizations to employees app
+   - Created modular models (department.py, employee.py, document.py)
+   - Enhanced Employee model (added salary, emergency contacts)
+   - Removed obsolete fields (preferred_name, personal_email, mobile, etc.)
+   - Fixed all cross-app imports
+
+3. **Database Schema Updates ✅**
+   - Faked conflicting migrations
+   - Manually added salary column via SQL
+   - Dropped obsolete columns via Django shell
+   - Verified all APIs working
+
+4. **Monorepo Reorganization ✅**
+   - Moved \`services/web\` → \`platforms/web\`
+   - Updated README structure section
+   - Git history preserved with \`git mv\`
+   - All services still working from new location
+
+5. **Infrastructure Fixes ✅**
+   - Resolved Neo4j healthcheck issues
+   - All 8 Docker services now healthy
+
+### **Files Modified**
+**Backend:** 8 files (config, models, serializers, views)  
+**Frontend:** 3 files (departments/page.tsx, package.json)  
+**Docs:** README.md, development_log.txt  
+
+### **Key Decisions**
+- Moved Department to employees app (better domain organization)
+- Removed obsolete fields (simplify model)
+- Reorganized monorepo (semantic clarity)
+
+---
+
+## **🚀 PHASE 5: AUTHENTICATION & AUTHORIZATION**
+
+### **Goal**
+Integrate Keycloak for complete authentication system with JWT tokens and role-based access control.
+
+### **Prerequisites**
+✅ Keycloak already configured with:
+- Realm: \`hr-lookout\`
+- 4 Clients: hr-web-app, hr-mobile-app, hr-core-service, payroll-service
+- 6 Roles: hr_admin, hr_manager, hr_specialist, employee, payroll_admin, finance_viewer
+- 3 Test Users:
+  - admin / admin (hr_admin)
+  - hr.manager / password (hr_manager)
+  - employee / password (employee)
+
+### **Implementation Steps**
+
+**Step 1: Fix Backend Library Compatibility**
+\`\`\`powershell
+cd services/hr-core
+# Try option 1 first
+pip install python-keycloak==3.7.0
+
+# If that fails, try option 2
+pip install httpx==0.24.1
+
+# Restart backend
+docker-compose restart hr-core
+\`\`\`
+
+**Step 2: Re-enable Authentication in Backend**
+Edit \`services/hr-core/config/settings.py\`:
+- Uncomment KeycloakAuthenticationMiddleware
+- Uncomment KeycloakAuthentication in DEFAULT_AUTHENTICATION_CLASSES
+- Change DEFAULT_PERMISSION_CLASSES back to IsAuthenticated
+
+**Step 3: Install Frontend Auth Packages**
+\`\`\`powershell
+cd platforms/web
+npm install keycloak-js @react-keycloak/web
+\`\`\`
+
+**Step 4: Create Auth Provider**
+- Create \`app/providers/auth.tsx\`
+- Wrap app in \`layout.tsx\`
+- Add protected route HOC
+
+**Step 5: Implement Auth Pages**
+- Login page
+- Logout functionality
+- User profile page
+- Role-based navigation
+
+**Step 6: Test Authentication Flow**
+- Login with test users
+- Verify JWT in localStorage
+- Test protected API calls
+- Verify role-based access
+
+### **Expected Duration**
+4-6 hours for complete implementation
+
+### **Alternative Phase 5 Options**
+If authentication seems too complex right now:
+- **Option 2:** Document Management (file uploads with MinIO)
+- **Option 3:** Advanced Features (employee profiles, reporting dashboard)
+
+---
+
+## **🔧 TROUBLESHOOTING GUIDE**
+
+### **Services Not Starting**
+\`\`\`powershell
+docker-compose down
+docker-compose up -d
+Start-Sleep -Seconds 30
+docker-compose ps
+\`\`\`
+
+### **Neo4j Unhealthy**
+\`\`\`powershell
+docker stop hr-lookout-neo4j
+docker rm hr-lookout-neo4j
+docker volume rm hr-lookout_neo4j_data
+docker-compose up -d neo4j
+\`\`\`
+
+### **Frontend Not Loading**
+\`\`\`powershell
+cd platforms\web
+npm install
+npm run dev
+\`\`\`
+
+### **Backend Connection Error**
+\`\`\`powershell
+curl http://localhost:8001/health/
+docker logs hr-lookout-hr-core -f
+docker-compose restart hr-core
+\`\`\`
+
+### **CORS Issues**
+- Check \`.env\` has \`DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3000\`
+- Restart: \`docker-compose restart hr-core\`
+
+---
+
+## **📚 QUICK REFERENCE**
+
+### **Access URLs**
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Frontend | http://localhost:3000 | - |
+| Backend API | http://localhost:8001/api/v1/ | - |
+| GraphQL | http://localhost:8001/graphql/ | - |
+| Admin | http://localhost:8001/admin/ | Create superuser |
+| Keycloak | http://localhost:8180 | admin / admin |
+| MinIO | http://localhost:9001 | minioadmin / minioadmin |
+
+### **Essential Commands**
+\`\`\`powershell
+# Start everything
+docker-compose up -d
+cd platforms\web && npm run dev
+
+# Check status
+docker-compose ps
+git status
+
+# Create superuser
+docker-compose exec hr-core python manage.py createsuperuser
+
+# Run migrations
+docker-compose exec hr-core python manage.py migrate
+
+# View logs
+docker logs hr-lookout-hr-core -f
+\`\`\`
+
+---
+
+## **⚠️ IMPORTANT REMINDERS**
+
+### **Before Starting Work**
+1. Verify all services running: \`docker-compose ps\`
+2. Check git status: \`git status\`
+3. Pull latest: \`git pull origin main\`
+4. Verify frontend and backend accessible
+
+### **When Making Changes**
+1. Ask Charan to share current file first
+2. Provide complete files, not snippets
+3. Give exact PowerShell commands
+4. Explain *why* each change is made
+5. Include verification steps
+
+### **After Completing Work**
+1. Update \`development_log.txt\`
+2. Update \`README.md\` if needed
+3. Create detailed git commits
+4. Test all CRUD operations
+5. Verify all services healthy
+
+---
+
+## **📞 PROJECT METRICS**
+
+**Development Time:** ~15 hours  
+**Lines of Code:** ~6,000+  
+**Phases Complete:** 4 of 5 (80%)  
+**Docker Services:** 8  
+**API Endpoints:** 30+  
+**Frontend Pages:** 4  
+**Database Tables:** 4  
+
+---
+
+## **🎉 YOU'RE READY TO START!**
+
+This context file contains everything needed to continue development seamlessly.
+
+**Status:** Phase 4 Complete  
+**Next:** Phase 5 - Authentication & Authorization  
+**Last Updated:** October 28, 2025, 3:00 AM IST  
+
+---
+
+**END OF CONTEXT FILE**
+"@ | Out-File -FilePath "PROJECT_CONTEXT_PHASE5.md" -Encoding UTF8
+
+Write-Host "✅ Context file created: PROJECT_CONTEXT_PHASE5.md" -ForegroundColor Green
+

@@ -5,9 +5,49 @@ Authentication and health check views
 from django.http import JsonResponse
 from django.db import connection
 from django.conf import settings
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 import redis
 from pymongo import MongoClient
 
+
+# ============================================================================
+# AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_info(request):
+    """
+    Get current authenticated user information
+    
+    Returns user details from Keycloak token including roles and permissions.
+    """
+    user = request.user
+    
+    # Convert KeycloakUser to dictionary
+    if hasattr(user, 'to_dict'):
+        user_data = user.to_dict()
+    else:
+        # Fallback for regular Django users
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        }
+    
+    return Response({
+        'user': user_data,
+        'authenticated': True,
+    })
+
+
+# ============================================================================
+# HEALTH CHECK ENDPOINTS
+# ============================================================================
 
 def health_check(request):
     """
@@ -47,6 +87,10 @@ def liveness_check(request):
         'alive': True,
     })
 
+
+# ============================================================================
+# INTERNAL HEALTH CHECK HELPERS
+# ============================================================================
 
 def _check_postgres():
     """Check PostgreSQL connection"""

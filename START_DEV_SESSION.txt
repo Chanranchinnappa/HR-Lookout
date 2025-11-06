@@ -1,0 +1,37 @@
+# Save this in project root
+@"
+# HR-Lookout Development Session Startup Script
+Write-Host "🚀 Starting HR-Lookout Development Environment..." -ForegroundColor Cyan
+
+# Navigate to project
+cd "C:\Users\Charan Chinnappa Pm\Projects\HR-Lookout"
+
+Write-Host "📦 Starting Docker services..." -ForegroundColor Yellow
+docker-compose up -d
+
+Write-Host "⏳ Waiting for services to initialize (30 seconds)..." -ForegroundColor Yellow
+Start-Sleep -Seconds 30
+
+Write-Host "✅ Checking service status..." -ForegroundColor Green
+docker-compose ps
+
+
+Write-Host ""
+Write-Host "🌐 Access URLs:" -ForegroundColor Cyan
+Write-Host "  Frontend:  http://localhost:3000" -ForegroundColor White
+Write-Host "  Backend:   http://localhost:8001" -ForegroundColor White
+Write-Host "  Admin:     http://localhost:8001/admin" -ForegroundColor White
+Write-Host "  GraphQL:   http://localhost:8001/graphql" -ForegroundColor White
+Write-Host "  Keycloak:  http://localhost:8180" -ForegroundColor White
+
+Write-Host ""
+Write-Host "📝 Next Steps:" -ForegroundColor Cyan
+Write-Host "  1. Open new terminal: cd platforms\web" -ForegroundColor White
+Write-Host "  2. Start frontend: npm run dev" -ForegroundColor White
+Write-Host "  3. Open browser: http://localhost:3000" -ForegroundColor White
+
+Write-Host ""
+Write-Host "✅ Development environment ready!" -ForegroundColor Green
+"@ | Out-File -FilePath "START_DEV_SESSION.ps1" -Encoding UTF8
+
+Write-Host "✅ Quick start script created: START_DEV_SESSION.ps1" -ForegroundColor Green

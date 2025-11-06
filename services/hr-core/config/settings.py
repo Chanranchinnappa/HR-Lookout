@@ -14,6 +14,9 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost').split(',')
 
+# Service version for health checks
+SERVICE_VERSION = '1.0.0'
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -29,7 +32,7 @@ INSTALLED_APPS = [
     'graphene_django',
     
     # Local apps
-    'hr_core.apps.core',  # ← ADD THIS LINE (Core app must be first!)
+    'hr_core.apps.core',  # Core app must be first!
     'hr_core.apps.organizations',
     'hr_core.apps.employees',
     'hr_core.apps.authentication',
@@ -45,7 +48,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    #'hr_core.apps.authentication.middleware.KeycloakAuthenticationMiddleware',
+    # ✅ ENABLED: Keycloak authentication middleware
+    'hr_core.apps.authentication.middleware.KeycloakAuthenticationMiddleware',
     'hr_core.apps.audit.middleware.AuditMiddleware',
 ]
 
@@ -124,10 +128,12 @@ CORS_ALLOW_CREDENTIALS = True
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'hr_core.apps.authentication.backends.KeycloakAuthentication',
+        # ✅ ENABLED: Keycloak JWT authentication
+        'hr_core.apps.authentication.backends.KeycloakAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-         'rest_framework.permissions.AllowAny',
+        # ✅ CHANGED: Require authentication by default (can override per view)
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
