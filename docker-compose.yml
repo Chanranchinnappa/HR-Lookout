@@ -254,6 +254,8 @@ services:
       KEYCLOAK_REALM: hr-lookout
       KEYCLOAK_CLIENT_ID: hr-core-service
       KEYCLOAK_CLIENT_SECRET: hr-core-service-secret-2025-change-in-production
+      KEYCLOAK_ADMIN_USER: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minio_admin}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minio_secure_password_2025}
       AWS_STORAGE_BUCKET_NAME: hr-documents
