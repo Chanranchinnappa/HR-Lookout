@@ -1,3 +1,6 @@
+"""
+Serializers for Employee, Department, and Document models
+"""
 from rest_framework import serializers
 from .models import Employee, Department, Document
 from hr_core.apps.organizations.models import Organization
@@ -8,7 +11,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
     organization_name = serializers.CharField(source='organization.name', read_only=True)
     head_name = serializers.SerializerMethodField()
     employee_count = serializers.ReadOnlyField()
-    
+
     class Meta:
         model = Department
         fields = [
@@ -27,25 +30,21 @@ class DepartmentSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'employee_count']
-    
+        read_only_fields = ['created_at', 'updated_at', 'employee_count', 'code']
+
     def get_head_name(self, obj):
         """Get department head's full name"""
         if obj.head:
-            return obj.head.full_name
+            return obj.head.get_full_name()
         return None
-    
-    def validate_code(self, value):
-        """Ensure department code is uppercase"""
-        return value.upper()
 
 
 class EmployeeListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for employee lists"""
     department_name = serializers.CharField(source='department.name', read_only=True)
     organization_name = serializers.CharField(source='organization.name', read_only=True)
-    full_name = serializers.ReadOnlyField()
-    
+    full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Employee
         fields = [
@@ -60,9 +59,13 @@ class EmployeeListSerializer(serializers.ModelSerializer):
             'department_name',
             'organization',
             'organization_name',
-            'employment_status',
+            'status',  # ✅ Changed from employment_status
             'hire_date',
         ]
+
+    def get_full_name(self, obj):
+        """Get employee's full name"""
+        return obj.get_full_name()
 
 
 class EmployeeDetailSerializer(serializers.ModelSerializer):
@@ -70,9 +73,8 @@ class EmployeeDetailSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     organization_name = serializers.CharField(source='organization.name', read_only=True)
     manager_name = serializers.SerializerMethodField()
-    full_name = serializers.ReadOnlyField()
-    is_active = serializers.ReadOnlyField()
-    
+    full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Employee
         fields = [
@@ -94,9 +96,7 @@ class EmployeeDetailSerializer(serializers.ModelSerializer):
             'organization_name',
             'manager',
             'manager_name',
-            'employment_status',
-            'is_active',
-            'salary',
+            'status',  # ✅ Changed from employment_status
             'address_line1',
             'address_line2',
             'city',
@@ -109,23 +109,24 @@ class EmployeeDetailSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'full_name', 'is_active']
-        extra_kwargs = {
-            'salary': {'write_only': True},  # Don't expose salary in API responses by default
-        }
-    
+        read_only_fields = ['created_at', 'updated_at', 'full_name', 'employee_id']
+
+    def get_full_name(self, obj):
+        """Get employee's full name"""
+        return obj.get_full_name()
+
     def get_manager_name(self, obj):
         """Get manager's full name"""
         if obj.manager:
-            return obj.manager.full_name
+            return obj.manager.get_full_name()
         return None
 
 
 class DocumentSerializer(serializers.ModelSerializer):
     """Serializer for Document model"""
-    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    employee_name = serializers.SerializerMethodField()
     uploaded_by_name = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Document
         fields = [
@@ -135,25 +136,25 @@ class DocumentSerializer(serializers.ModelSerializer):
             'organization',
             'title',
             'document_type',
-            'file',
-            'description',
+            'file_key',  # ✅ Changed from 'file'
+            'file_name',  # ✅ Added
+            'file_size',  # ✅ Added
+            'mime_type',  # ✅ Added
             'uploaded_by',
             'uploaded_by_name',
-            'is_archived',  # CHANGED from is_verified
-            'expiry_date',
-            'created_at',
-            'updated_at'
+            'is_archived',
+            'uploaded_at',  # ✅ Changed from created_at
         ]
-        read_only_fields = ['created_at', 'updated_at', 'uploaded_by']
-    
+        read_only_fields = ['uploaded_at', 'file_size', 'mime_type', 'uploaded_by']
+
+    def get_employee_name(self, obj):
+        """Get employee's full name"""
+        if obj.employee:
+            return obj.employee.get_full_name()
+        return None
+
     def get_uploaded_by_name(self, obj):
         """Get uploader's name"""
         if obj.uploaded_by:
-            return obj.uploaded_by.full_name
-        return None
-    
-    def get_verified_by_name(self, obj):
-        """Get verifier's name"""
-        if obj.verified_by:
-            return obj.verified_by.full_name
+            return obj.uploaded_by.get_full_name()
         return None
