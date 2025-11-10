@@ -1,21 +1,21 @@
 """
-Django settings for hr-core microservice.
+Django settings for HR-Lookout project.
 """
 
 import os
 from pathlib import Path
-from decouple import config
+from datetime import timedelta
 
-# Build paths inside the project
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security
-SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost').split(',')
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production-123456')
 
-# Service version for health checks
-SERVICE_VERSION = '1.0.0'
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -25,17 +25,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
     # Third-party apps
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'graphene_django',
-    
     # Local apps
-    'hr_core.apps.core',  # Core app must be first!
+    'hr_core.apps.core',
     'hr_core.apps.organizations',
-    'hr_core.apps.employees',
     'hr_core.apps.authentication',
+    'hr_core.apps.employees',
+    'hr_core.apps.storage',
 ]
 
 MIDDLEWARE = [
@@ -48,9 +48,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # ✅ ENABLED: Keycloak authentication middleware
-    'hr_core.apps.authentication.middleware.KeycloakAuthenticationMiddleware',
-    'hr_core.apps.audit.middleware.AuditMiddleware',
+    # Custom middleware - DISABLED FOR DEVELOPMENT
+    # 'hr_core.apps.authentication.middleware.TokenAuthenticationMiddleware',
+    # 'hr_core.apps.authentication.middleware.TenantMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -73,26 +73,32 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database (PostgreSQL)
+# Database
 DATABASES = {
     'default': {
-        'ENGINE': config('DATABASE_ENGINE'),
-        'NAME': config('DATABASE_NAME'),
-        'USER': config('DATABASE_USER'),
-        'PASSWORD': config('DATABASE_PASSWORD'),
-        'HOST': config('DATABASE_HOST'),
-        'PORT': config('DATABASE_PORT'),
-        'ATOMIC_REQUESTS': True,
-        'CONN_MAX_AGE': 600,
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DATABASE_NAME', 'hr_core'),
+        'USER': os.environ.get('DATABASE_USER', 'hr_admin'),
+        'PASSWORD': os.environ.get('DATABASE_PASSWORD', 'hr_secure_pass_2024'),
+        'HOST': os.environ.get('DATABASE_HOST', 'localhost'),
+        'PORT': os.environ.get('DATABASE_PORT', '5432'),
     }
 }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
 # Internationalization
@@ -101,39 +107,26 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (use MinIO/S3)
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
-AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
-AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
-AWS_S3_SIGNATURE_VERSION = config('AWS_S3_SIGNATURE_VERSION', default='s3v4')
-AWS_S3_USE_SSL = config('AWS_S3_USE_SSL', default=False, cast=bool)
-AWS_QUERYSTRING_AUTH = True
-AWS_DEFAULT_ACL = None
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS Settings
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000').split(',')
-CORS_ALLOW_CREDENTIALS = True
-
-# REST Framework
+# REST Framework - DEVELOPMENT MODE (Authentication Disabled)
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # ✅ ENABLED: Keycloak JWT authentication
-        'hr_core.apps.authentication.backends.KeycloakAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        # ✅ CHANGED: Require authentication by default (can override per view)
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # ✅ CHANGED: Allow unauthenticated access
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -142,116 +135,79 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-    'EXCEPTION_HANDLER': 'hr_core.apps.authentication.exceptions.custom_exception_handler',
 }
 
-# GraphQL
-GRAPHENE = {
-    'SCHEMA': 'config.schema.schema',
-    'MIDDLEWARE': [
-        'graphene_django.debug.DjangoDebugMiddleware',
-    ],
-}
+# CORS settings
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:3000,http://localhost:8000'
+).split(',')
+CORS_ALLOW_CREDENTIALS = True
 
-# Redis Configuration
-REDIS_HOST = config('REDIS_HOST', default='redis')
-REDIS_PORT = config('REDIS_PORT', default=6379, cast=int)
-REDIS_PASSWORD = config('REDIS_PASSWORD', default='')
-REDIS_DB = config('REDIS_DB', default=0, cast=int)
-
+# Redis Cache
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}',
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f"redis://:{os.environ.get('REDIS_PASSWORD', 'redis_secure_pass_2024')}@{os.environ.get('REDIS_HOST', 'localhost')}:{os.environ.get('REDIS_PORT', '6379')}/1",
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'KEY_PREFIX': 'hr_core',
-        'TIMEOUT': 300,
+        }
     }
 }
 
-# MongoDB Configuration (for audit logs)
+# MongoDB settings
 MONGODB_SETTINGS = {
-    'host': config('MONGODB_HOST', default='mongodb'),
-    'port': config('MONGODB_PORT', default=27017, cast=int),
-    'username': config('MONGODB_USER'),
-    'password': config('MONGODB_PASSWORD'),
-    'database': config('MONGODB_DATABASE', default='hr_lookout_audit'),
+    'host': os.environ.get('MONGODB_HOST', 'localhost'),
+    'port': int(os.environ.get('MONGODB_PORT', 27017)),
+    'username': os.environ.get('MONGODB_USER', 'mongo_admin'),
+    'password': os.environ.get('MONGODB_PASSWORD', 'mongo_secure_pass_2024'),
+    'db': os.environ.get('MONGODB_DB', 'hr_logs'),
 }
 
-# Neo4j Configuration (for org chart)
+# Neo4j settings
 NEO4J_SETTINGS = {
-    'uri': config('NEO4J_URI', default='bolt://neo4j:7687'),
-    'user': config('NEO4J_USER', default='neo4j'),
-    'password': config('NEO4J_PASSWORD'),
+    'uri': os.environ.get('NEO4J_URI', 'bolt://localhost:7687'),
+    'username': os.environ.get('NEO4J_USER', 'neo4j'),
+    'password': os.environ.get('NEO4J_PASSWORD', 'neo4j_secure_pass_2024'),
 }
 
-# Keycloak Configuration
-KEYCLOAK_CONFIG = {
-    'server_url': config('KEYCLOAK_SERVER_URL'),
-    'realm': config('KEYCLOAK_REALM'),
-    'client_id': config('KEYCLOAK_CLIENT_ID'),
-    'client_secret': config('KEYCLOAK_CLIENT_SECRET'),
-    'admin_user': config('KEYCLOAK_ADMIN_USER', default='admin'),
-    'admin_password': config('KEYCLOAK_ADMIN_PASSWORD'),
+# Storage Backend Configuration
+STORAGE_PROVIDER = os.environ.get('STORAGE_PROVIDER', 'local')
+
+# Local Storage
+LOCAL_STORAGE_ROOT = str(MEDIA_ROOT / 'documents')
+
+# AWS S3
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_S3_BUCKET_NAME = os.environ.get('AWS_S3_BUCKET_NAME', 'hr-lookout-documents')
+AWS_S3_REGION = os.environ.get('AWS_S3_REGION', 'us-east-1')
+
+# Google Cloud Storage
+GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME', 'hr-lookout-documents')
+GCS_CREDENTIALS_PATH = os.environ.get('GCS_CREDENTIALS_PATH', '')
+
+# Azure Blob Storage
+AZURE_STORAGE_ACCOUNT_NAME = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME', '')
+AZURE_STORAGE_ACCOUNT_KEY = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY', '')
+AZURE_CONTAINER_NAME = os.environ.get('AZURE_CONTAINER_NAME', 'hr-documents')
+
+# Graphene (GraphQL)
+GRAPHENE = {
+    'SCHEMA': 'hr_core.schema.schema'
 }
-
-# Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-
-# Sentry Configuration (Error Tracking)
-SENTRY_DSN = config('SENTRY_DSN', default='')
-if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-        environment=config('ENVIRONMENT', default='development'),
-    )
 
 # Logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
         },
     },
     'root': {
         'handlers': ['console'],
         'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'hr_core': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
     },
 }

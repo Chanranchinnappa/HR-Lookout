@@ -1,29 +1,62 @@
 """
-URL configuration for hr-core microservice.
+Main URL Configuration for HR-Lookout
+Compatible with existing views structure
 """
-
 from django.contrib import admin
 from django.urls import path, include
-from django.views.decorators.csrf import csrf_exempt
-from graphene_django.views import GraphQLView
-from hr_core.apps.authentication import views as auth_views
-from hr_core.apps.employees.urls import department_urlpatterns
+from django.conf import settings
+from django.conf.urls.static import static
+from django.http import JsonResponse
+from rest_framework import routers
+from rest_framework.authtoken.views import obtain_auth_token
+
+# API Router
+router = routers.DefaultRouter()
+
+# Import existing viewsets
+from hr_core.apps.organizations.views import OrganizationViewSet
+from hr_core.apps.employees.views import (
+    EmployeeViewSet,
+    DepartmentViewSet,
+    DocumentViewSet
+)
+
+# Register API routes
+router.register(r'organizations', OrganizationViewSet, basename='organization')
+router.register(r'employees', EmployeeViewSet, basename='employee')
+router.register(r'departments', DepartmentViewSet, basename='department')
+router.register(r'documents', DocumentViewSet, basename='document')
+
+# Import auth views (function-based)
+from hr_core.apps.authentication.views import (
+    health_check,
+    login_view,
+    logout_view,
+    profile_view
+)
 
 urlpatterns = [
-    # Admin
+    # Django Admin
     path('admin/', admin.site.urls),
     
-    # Root health check endpoint (for Docker healthchecks and k8s probes)
-    path('health/', auth_views.health_check, name='root-health-check'),
+    # API v1 - Main REST endpoints
+    path('api/v1/', include(router.urls)),
     
-    # App-scoped authentication routes
-    path('api/v1/auth/', include('hr_core.apps.authentication.urls')),
-
-    # REST API endpoints
-    path('api/v1/employees/', include('hr_core.apps.employees.urls')),
-    path('api/v1/organizations/', include('hr_core.apps.organizations.urls')),
-    path('api/v1/departments/', include(department_urlpatterns)),
-
-    # GraphQL endpoint
-    path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    # Authentication endpoints (function-based views)
+    path('api/v1/auth/login/', login_view, name='api-login'),
+    path('api/v1/auth/logout/', logout_view, name='api-logout'),
+    path('api/v1/auth/me/', profile_view, name='current-user'),
+    path('api/v1/auth/profile/', profile_view, name='user-profile'),
+    
+    # DRF browsable API auth
+    path('api-auth/', include('rest_framework.urls')),
+    
+    # Health check
+    path('health/', health_check, name='health'),
+    path('api/v1/health/', health_check, name='api-health'),
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

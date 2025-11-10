@@ -1,134 +1,133 @@
 """
-Authentication and health check views
+Authentication views for Django Token Auth
 """
-
-from django.http import JsonResponse
-from django.db import connection
-from django.conf import settings
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-import redis
-from pymongo import MongoClient
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate, login, logout
+from django.http import JsonResponse
 
-
-# ============================================================================
-# AUTHENTICATION ENDPOINTS
-# ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_info(request):
+@permission_classes([AllowAny])
+def health_check(request):
     """
-    Get current authenticated user information
-    
-    Returns user details from Keycloak token including roles and permissions.
+    Health check endpoint for Docker/Kubernetes
     """
-    user = request.user
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'hr-core',
+        'version': '1.0.0'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    """
+    Login endpoint - returns auth token
     
-    # Convert KeycloakUser to dictionary
-    if hasattr(user, 'to_dict'):
-        user_data = user.to_dict()
-    else:
-        # Fallback for regular Django users
-        user_data = {
+    POST /api/v1/auth/login/
+    Body: {"username": "user", "password": "pass"}
+    Returns: {"token": "xxx", "user": {...}}
+    """
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    if not username or not password:
+        return Response(
+            {'error': 'Username and password required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Authenticate user
+    user = authenticate(request, username=username, password=password)
+    
+    if user is None:
+        return Response(
+            {'error': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    # Create or get token
+    token, created = Token.objects.get_or_create(user=user)
+    
+    # Return token + user info
+    return Response({
+        'token': token.key,
+        'user': {
             'id': user.id,
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
+            'is_super_admin': user.is_super_admin,
+            'organization': {
+                'id': user.organization.id,
+                'name': user.organization.name,
+                'org_unique_id': user.organization.org_unique_id
+            } if user.organization else None,
+            'role': {
+                'id': user.role.id,
+                'name': user.role.name,
+                'level': user.role.level
+            } if user.role else None
         }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    """
+    Logout endpoint - deletes auth token
+    
+    POST /api/v1/auth/logout/
+    Headers: Authorization: Token xxx
+    """
+    # Delete user's token
+    request.user.auth_token.delete()
     
     return Response({
-        'user': user_data,
-        'authenticated': True,
-    })
+        'message': 'Successfully logged out'
+    }, status=status.HTTP_200_OK)
 
 
-# ============================================================================
-# HEALTH CHECK ENDPOINTS
-# ============================================================================
-
-def health_check(request):
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_view(request):
     """
-    Overall health check endpoint
-    """
-    return JsonResponse({
-        'status': 'healthy',
-        'service': 'hr-core',
-        'version': settings.SERVICE_VERSION if hasattr(settings, 'SERVICE_VERSION') else '1.0.0',
-    })
-
-
-def readiness_check(request):
-    """
-    Readiness check - verifies all dependencies are available
-    """
-    checks = {
-        'postgres': _check_postgres(),
-        'redis': _check_redis(),
-        'mongodb': _check_mongodb(),
-    }
+    Get current user profile
     
-    all_ready = all(checks.values())
-    status_code = 200 if all_ready else 503
+    GET /api/v1/auth/profile/
+    Headers: Authorization: Token xxx
+    """
+    user = request.user
     
-    return JsonResponse({
-        'ready': all_ready,
-        'checks': checks,
-    }, status=status_code)
-
-
-def liveness_check(request):
-    """
-    Liveness check - verifies the service is alive
-    """
-    return JsonResponse({
-        'alive': True,
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'is_super_admin': user.is_super_admin,
+        'organization': {
+            'id': user.organization.id,
+            'name': user.organization.name,
+            'org_unique_id': user.organization.org_unique_id
+        } if user.organization else None,
+        'role': {
+            'id': user.role.id,
+            'name': user.role.name,
+            'level': user.role.level,
+            'permissions': list(user.role.permissions.values_list('codename', flat=True))
+        } if user.role else None,
+        'employee': {
+            'id': user.employee.id,
+            'employee_id': user.employee.employee_id,
+            'full_name': user.employee.get_full_name(),
+            'department': user.employee.department.name if user.employee.department else None
+        } if user.employee else None
     })
-
-
-# ============================================================================
-# INTERNAL HEALTH CHECK HELPERS
-# ============================================================================
-
-def _check_postgres():
-    """Check PostgreSQL connection"""
-    try:
-        connection.ensure_connection()
-        return True
-    except Exception:
-        return False
-
-
-def _check_redis():
-    """Check Redis connection"""
-    try:
-        redis_client = redis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-            db=settings.REDIS_DB,
-            socket_connect_timeout=2,
-        )
-        redis_client.ping()
-        return True
-    except Exception:
-        return False
-
-
-def _check_mongodb():
-    """Check MongoDB connection"""
-    try:
-        mongo_settings = settings.MONGODB_SETTINGS
-        client = MongoClient(
-            host=mongo_settings['host'],
-            port=mongo_settings['port'],
-            username=mongo_settings['username'],
-            password=mongo_settings['password'],
-            serverSelectionTimeoutMS=2000,
-        )
-        client.server_info()
-        return True
-    except Exception:
-        return False

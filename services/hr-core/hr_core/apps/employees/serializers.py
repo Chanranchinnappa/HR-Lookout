@@ -125,7 +125,6 @@ class DocumentSerializer(serializers.ModelSerializer):
     """Serializer for Document model"""
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     uploaded_by_name = serializers.SerializerMethodField()
-    verified_by_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Document
@@ -140,15 +139,12 @@ class DocumentSerializer(serializers.ModelSerializer):
             'description',
             'uploaded_by',
             'uploaded_by_name',
-            'is_verified',
-            'verified_by',
-            'verified_by_name',
-            'verified_at',
+            'is_archived',  # CHANGED from is_verified
             'expiry_date',
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'uploaded_by', 'verified_at']
+        read_only_fields = ['created_at', 'updated_at', 'uploaded_by']
     
     def get_uploaded_by_name(self, obj):
         """Get uploader's name"""

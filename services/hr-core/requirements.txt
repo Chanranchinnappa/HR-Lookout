@@ -45,3 +45,14 @@ faker==26.0.0
 gunicorn==22.0.0
 whitenoise==6.7.0
 sentry-sdk==2.7.1
+
+# Cloud Storage Backends (install as needed)
+google-cloud-storage==2.16.0  # For GCS
+azure-storage-blob==12.19.1   # For Azure
+
+# Image processing
+Pillow==10.1.0
+
+
+# Redis cache backend
+django-redis==5.4.0

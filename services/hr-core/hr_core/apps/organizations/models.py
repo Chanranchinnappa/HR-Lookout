@@ -1,3 +1,7 @@
+"""
+Organization model - multi-tenant root entity
+"""
+import uuid
 from django.db import models
 
 
@@ -5,7 +9,17 @@ class Organization(models.Model):
     """
     Organization model - represents companies/entities using the system
     This is the top-level tenant model for multi-tenancy
+    Each client gets their own organization
     """
+    # Unique system-generated ID (visible only to super admin)
+    org_unique_id = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False,
+        help_text='System-generated unique org ID (ORG-XXXXXXXX)'
+    )
+    
+    # Basic info
     name = models.CharField(max_length=200, help_text="Organization name")
     legal_name = models.CharField(max_length=200, help_text="Legal/registered name")
     
@@ -46,9 +60,19 @@ class Organization(models.Model):
         ordering = ['name']
         verbose_name = 'Organization'
         verbose_name_plural = 'Organizations'
+        indexes = [
+            models.Index(fields=['org_unique_id']),
+            models.Index(fields=['is_active', 'created_at']),
+        ]
     
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.org_unique_id})"
+    
+    def save(self, *args, **kwargs):
+        # Generate unique org ID on creation
+        if not self.org_unique_id:
+            self.org_unique_id = f"ORG-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
     
     @property
     def employee_count(self):
@@ -59,3 +83,8 @@ class Organization(models.Model):
     def department_count(self):
         """Get total number of departments in this organization"""
         return self.department_set.count()
+    
+    @property
+    def active_employee_count(self):
+        """Get count of active employees"""
+        return self.employee_set.filter(status='ACTIVE').count()
