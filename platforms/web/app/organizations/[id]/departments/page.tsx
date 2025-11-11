@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { departmentsApi, organizationsApi, employeesApi } from '@/lib/api';
 
@@ -23,37 +23,32 @@ interface Organization {
   name: string;
 }
 
-export default function DepartmentsPage() {
+export default function OrganizationDepartmentsPage() {
+  const params = useParams();
   const router = useRouter();
+  const orgId = params.id as string;
+
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [orgFilter, setOrgFilter] = useState<string>('');
 
   useEffect(() => {
-    fetchOrganizations();
-  }, []);
-
-  useEffect(() => {
-    fetchDepartments();
-  }, [orgFilter]);
-
-  const fetchOrganizations = async () => {
-    try {
-      const response = await organizationsApi.getAll();
-      setOrganizations(response.data.results || response.data || []);
-    } catch (err) {
-      console.error('Error fetching organizations:', err);
+    if (orgId) {
+      fetchData();
     }
-  };
+  }, [orgId]);
 
-  const fetchDepartments = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const params = orgFilter ? { organization: orgFilter } : {};
-      const response = await departmentsApi.getAll(params);
-      const depts = response.data.results || response.data || [];
+      setError(null);
+
+      const orgRes = await organizationsApi.getById(parseInt(orgId));
+      setOrganization(orgRes.data);
+
+      const deptsRes = await departmentsApi.getAll({ organization: orgId });
+      const depts = deptsRes.data.results || deptsRes.data || [];
 
       const deptsWithCounts = await Promise.all(
         depts.map(async (dept: Department) => {
@@ -69,7 +64,7 @@ export default function DepartmentsPage() {
       setDepartments(deptsWithCounts);
       setLoading(false);
     } catch (err: any) {
-      console.error('Error fetching departments:', err);
+      console.error('Error fetching data:', err);
       setError('Failed to load departments');
       setLoading(false);
     }
@@ -129,7 +124,7 @@ export default function DepartmentsPage() {
     );
   };
 
-  if (loading && departments.length === 0) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-white text-xl">Loading departments...</div>
@@ -137,16 +132,16 @@ export default function DepartmentsPage() {
     );
   }
 
-  if (error) {
+  if (error || !organization) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center">
-          <div className="text-red-400 text-xl mb-4">{error}</div>
+          <div className="text-red-400 text-xl mb-4">{error || 'Organization not found'}</div>
           <button
-            onClick={fetchDepartments}
+            onClick={() => router.push('/organizations')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            Retry
+            Back to Organizations
           </button>
         </div>
       </div>
@@ -156,45 +151,39 @@ export default function DepartmentsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Breadcrumb */}
+        <div className="mb-6">
+          <Link
+            href="/organizations"
+            className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-2 mb-4"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Organizations
+          </Link>
+        </div>
+
+        {/* Header with Add Button */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Departments</h1>
-            <p className="text-gray-300 text-lg">Manage all departments across organizations</p>
+            <h1 className="text-4xl font-bold text-white mb-2">{organization.name} - Departments</h1>
+            <p className="text-gray-300 text-lg">Click on a department to view details</p>
           </div>
           <Link
-            href="/departments/new"
+            href={`/departments/new?organization=${orgId}`}
             className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition shadow-lg font-medium"
           >
             + Add Department
           </Link>
         </div>
 
-        {/* Filter by Organization */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2 text-gray-300">Filter by Organization</label>
-          <select
-            value={orgFilter}
-            onChange={(e) => setOrgFilter(e.target.value)}
-            className="w-full md:w-96 px-4 py-3 bg-slate-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
-          >
-            <option value="">All Organizations</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* Departments Grid */}
         {departments.length === 0 ? (
           <div className="text-center py-12 bg-slate-800/50 rounded-2xl border border-gray-700">
-            <p className="text-gray-300 text-xl mb-4">
-              {orgFilter ? 'No departments found for this organization' : 'No departments found'}
-            </p>
+            <p className="text-gray-300 text-xl mb-4">No departments found for this organization</p>
             <Link
-              href="/departments/new"
+              href={`/departments/new?organization=${orgId}`}
               className="inline-block px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
             >
               Create First Department
@@ -205,59 +194,47 @@ export default function DepartmentsPage() {
             {departments.map((dept) => (
               <div
                 key={dept.id}
-                className="bg-gradient-to-br from-slate-800 to-slate-900 border border-gray-700 rounded-2xl overflow-hidden hover:shadow-lg hover:shadow-purple-500/5 transition-all hover:scale-[1.01] h-full flex flex-col"
+                onClick={() => router.push(`/departments/${dept.id}`)}
+                className="bg-gradient-to-br from-slate-800 to-slate-900 border border-gray-700 rounded-2xl p-6 hover:shadow-xl hover:shadow-purple-500/10 transition-all hover:scale-[1.02] cursor-pointer h-full flex flex-col"
               >
-                {/* TOP SECTION - Click goes to Department Details */}
-                <div
-                  onClick={() => router.push(`/departments/${dept.id}`)}
-                  className="p-6 cursor-pointer flex-1 flex flex-col"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="bg-purple-500/10 p-4 rounded-xl text-purple-400">
-                      {getDepartmentIcon(dept.name)}
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        dept.is_active
-                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                          : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                      }`}
-                    >
-                      {dept.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="bg-purple-500/10 p-4 rounded-xl text-purple-400">
+                    {getDepartmentIcon(dept.name)}
                   </div>
-
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {dept.name}
-                  </h3>
-
-                  <p className="text-sm text-gray-400 mb-1 font-mono">{dept.code}</p>
-                  {dept.organization_name && (
-                    <p className="text-sm text-gray-500 mb-3">{dept.organization_name}</p>
-                  )}
-
-                  {dept.description && (
-                    <p className="text-sm text-gray-300 mb-4 line-clamp-2">{dept.description}</p>
-                  )}
-
-                  {dept.head_name && (
-                    <div className="flex items-center gap-2 mb-4 text-gray-300">
-                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                        {dept.head_name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Head</p>
-                        <p className="text-sm font-semibold">{dept.head_name}</p>
-                      </div>
-                    </div>
-                  )}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      dept.is_active
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                    }`}
+                  >
+                    {dept.is_active ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
 
-                {/* BOTTOM SECTION - Click goes to Department Employees */}
-                <div
-                  onClick={() => router.push(`/departments/${dept.id}/employees`)}
-                  className="flex items-center justify-between px-6 py-4 border-t border-gray-700 bg-slate-900/50 cursor-pointer hover:bg-slate-900/70 transition"
-                >
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  {dept.name}
+                </h3>
+
+                <p className="text-sm text-gray-400 mb-3 font-mono">{dept.code}</p>
+
+                {dept.description && (
+                  <p className="text-sm text-gray-300 mb-4 line-clamp-2">{dept.description}</p>
+                )}
+
+                {dept.head_name && (
+                  <div className="flex items-center gap-2 mb-4 text-gray-300">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                      {dept.head_name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Head</p>
+                      <p className="text-sm font-semibold">{dept.head_name}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-700 mt-auto">
                   <div className="flex items-center gap-2 text-gray-400">
                     <svg
                       className="w-5 h-5"
@@ -276,9 +253,15 @@ export default function DepartmentsPage() {
                       {dept.employee_count || 0} Employees
                     </span>
                   </div>
-                  <span className="text-purple-400 text-sm font-medium">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/departments/${dept.id}/employees`);
+                    }}
+                    className="text-purple-400 hover:text-purple-300 text-sm font-medium transition underline"
+                  >
                     View Team →
-                  </span>
+                  </button>
                 </div>
               </div>
             ))}
