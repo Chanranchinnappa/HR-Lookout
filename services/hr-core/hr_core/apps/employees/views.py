@@ -3,20 +3,29 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
-from .models import Employee, Department
-from .serializers import EmployeeSerializer, DepartmentSerializer
 
+from .models import Employee, Department
+from .serializers import EmployeeListSerializer, EmployeeDetailSerializer, DepartmentSerializer
 
 class EmployeeViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Employee CRUD operations
+    """
     queryset = Employee.objects.all()
-    serializer_class = EmployeeSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['organization', 'department', 'status']
     search_fields = ['first_name', 'last_name', 'email', 'employee_id']
     ordering_fields = ['first_name', 'last_name', 'hire_date', 'created_at']
     ordering = ['first_name']
 
+    def get_serializer_class(self):
+        """Use different serializers for list and detail views"""
+        if self.action == 'list':
+            return EmployeeListSerializer
+        return EmployeeDetailSerializer
+
     def get_queryset(self):
+        """Filter queryset based on query parameters"""
         queryset = super().get_queryset()
         
         # Filter by organization if provided
@@ -36,17 +45,35 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         
         return queryset
 
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Get employee statistics"""
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        stats = {
+            'total': queryset.count(),
+            'active': queryset.filter(status='active').count(),
+            'inactive': queryset.filter(status='inactive').count(),
+            'on_leave': queryset.filter(status='on_leave').count(),
+        }
+        
+        return Response(stats)
+
 
 class DepartmentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Department CRUD operations
+    """
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['organization', 'is_active']
+    filterset_fields = ['organization', 'is_active', 'parent_department']
     search_fields = ['name', 'code', 'description']
     ordering_fields = ['name', 'code', 'created_at']
     ordering = ['name']
 
     def get_queryset(self):
+        """Filter queryset based on query parameters"""
         queryset = super().get_queryset()
         
         # Filter by organization if provided
@@ -56,42 +83,30 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         
         return queryset
 
-    def destroy(self, request, *args, **kwargs):
-        """
-        Custom delete with force option for super users
-        
-        Query params:
-        - force: 'true' to force delete with employees (super user only)
-        """
+    @action(detail=True, methods=['get'])
+    def employees(self, request, pk=None):
+        """Get all employees in this department"""
         department = self.get_object()
-        force = request.query_params.get('force', 'false').lower() == 'true'
+        employees = Employee.objects.filter(department=department)
         
-        # Check employee count
-        employee_count = department.employees.count()
+        # Apply pagination
+        page = self.paginate_queryset(employees)
+        if page is not None:
+            serializer = EmployeeListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         
-        # Block deletion if department has employees and not force delete
-        if employee_count > 0 and not force:
-            return Response(
-                {
-                    'error': 'Cannot delete department with employees',
-                    'message': f'This department has {employee_count} employee{"s" if employee_count != 1 else ""}. Please reassign or delete them first, or use force delete (super user only).',
-                    'employee_count': employee_count,
-                    'can_force_delete': True
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer = EmployeeListSerializer(employees, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Get department statistics"""
+        queryset = self.filter_queryset(self.get_queryset())
         
-        # Force delete - CASCADE will handle employees based on foreign key settings
-        if force and employee_count > 0:
-            # Log this action for audit trail
-            print(f"⚠️ FORCE DELETE: Department '{department.name}' (ID: {department.id}) with {employee_count} employees")
+        stats = {
+            'total': queryset.count(),
+            'active': queryset.filter(is_active=True).count(),
+            'inactive': queryset.filter(is_active=False).count(),
+        }
         
-        department.delete()
-        
-        return Response(
-            {
-                'message': 'Department deleted successfully',
-                'deleted_employees': employee_count if force else 0
-            },
-            status=status.HTTP_204_NO_CONTENT
-        )
+        return Response(stats)

@@ -1,13 +1,23 @@
 """
-Authentication views for Django Token Auth
+Authentication views for Django Token Auth with RBAC
+Handles user registration, login, logout, profile management
 """
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
+from django.utils import timezone
+from .models import UserProfile, Role
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -19,8 +29,90 @@ def health_check(request):
     return JsonResponse({
         'status': 'healthy',
         'service': 'hr-core',
-        'version': '1.0.0'
+        'version': '1.0.0',
+        'timestamp': timezone.now().isoformat()
     })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_view(request):
+    """
+    User registration endpoint
+    POST /api/v1/auth/register/
+    Body: {
+        "username": "user",
+        "email": "user@example.com",
+        "password": "securepass",
+        "first_name": "John",
+        "last_name": "Doe"
+    }
+    """
+    try:
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+
+        # Validation
+        if not username or not email or not password:
+            return Response(
+                {'error': 'Username, email, and password are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if user exists
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {'error': 'Username already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'error': 'Email already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate password strength
+        try:
+            validate_password(password)
+        except ValidationError as e:
+            return Response(
+                {'error': list(e.messages)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create user
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
+
+        # UserProfile is created automatically via signal
+        profile = user.userprofile
+
+        # Create token
+        token = Token.objects.create(user=user)
+
+        logger.info(f"New user registered: {username}")
+
+        return Response({
+            'message': 'User registered successfully',
+            'token': token.key,
+            'user': profile.to_dict()
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
+        return Response(
+            {'error': 'Registration failed'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['POST'])
@@ -28,54 +120,78 @@ def health_check(request):
 def login_view(request):
     """
     Login endpoint - returns auth token
-    
     POST /api/v1/auth/login/
     Body: {"username": "user", "password": "pass"}
     Returns: {"token": "xxx", "user": {...}}
     """
-    username = request.data.get('username')
-    password = request.data.get('password')
-    
-    if not username or not password:
+    try:
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response(
+                {'error': 'Username and password required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Authenticate user
+        user = authenticate(request, username=username, password=password)
+
+        if user is None:
+            return Response(
+                {'error': 'Invalid credentials'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Check if user is active
+        if not user.is_active:
+            return Response(
+                {'error': 'User account is disabled'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Create or get token
+        token, created = Token.objects.get_or_create(user=user)
+
+        # Update last login
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
+        # Get user profile
+        profile = user.userprofile
+
+        logger.info(f"User logged in: {username}")
+
+        # Return token + user info
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_super_admin': profile.is_super_admin,
+                'organization': {
+                    'id': profile.organization.id,
+                    'name': profile.organization.name,
+                    'org_unique_id': profile.organization.org_unique_id
+                } if profile.organization else None,
+                'role': {
+                    'id': profile.role.id,
+                    'name': profile.role.name,
+                    'level': profile.role.level
+                } if profile.role else None,
+                'permissions': [p.code for p in profile.get_all_permissions()]
+            }
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
         return Response(
-            {'error': 'Username and password required'},
-            status=status.HTTP_400_BAD_REQUEST
+            {'error': 'Login failed'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    
-    # Authenticate user
-    user = authenticate(request, username=username, password=password)
-    
-    if user is None:
-        return Response(
-            {'error': 'Invalid credentials'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    # Create or get token
-    token, created = Token.objects.get_or_create(user=user)
-    
-    # Return token + user info
-    return Response({
-        'token': token.key,
-        'user': {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'is_super_admin': user.is_super_admin,
-            'organization': {
-                'id': user.organization.id,
-                'name': user.organization.name,
-                'org_unique_id': user.organization.org_unique_id
-            } if user.organization else None,
-            'role': {
-                'id': user.role.id,
-                'name': user.role.name,
-                'level': user.role.level
-            } if user.role else None
-        }
-    })
 
 
 @api_view(['POST'])
@@ -83,16 +199,25 @@ def login_view(request):
 def logout_view(request):
     """
     Logout endpoint - deletes auth token
-    
     POST /api/v1/auth/logout/
     Headers: Authorization: Token xxx
     """
-    # Delete user's token
-    request.user.auth_token.delete()
-    
-    return Response({
-        'message': 'Successfully logged out'
-    }, status=status.HTTP_200_OK)
+    try:
+        # Delete user's token
+        request.user.auth_token.delete()
+
+        logger.info(f"User logged out: {request.user.username}")
+
+        return Response({
+            'message': 'Successfully logged out'
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Logout error: {str(e)}")
+        return Response(
+            {'error': 'Logout failed'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['GET'])
@@ -100,34 +225,189 @@ def logout_view(request):
 def profile_view(request):
     """
     Get current user profile
-    
     GET /api/v1/auth/profile/
     Headers: Authorization: Token xxx
     """
-    user = request.user
-    
-    return Response({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'is_super_admin': user.is_super_admin,
-        'organization': {
-            'id': user.organization.id,
-            'name': user.organization.name,
-            'org_unique_id': user.organization.org_unique_id
-        } if user.organization else None,
-        'role': {
-            'id': user.role.id,
-            'name': user.role.name,
-            'level': user.role.level,
-            'permissions': list(user.role.permissions.values_list('codename', flat=True))
-        } if user.role else None,
-        'employee': {
-            'id': user.employee.id,
-            'employee_id': user.employee.employee_id,
-            'full_name': user.employee.get_full_name(),
-            'department': user.employee.department.name if user.employee.department else None
-        } if user.employee else None
-    })
+    try:
+        user = request.user
+        profile = user.userprofile
+
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_super_admin': profile.is_super_admin,
+            'phone': profile.phone,
+            'avatar': profile.avatar.url if profile.avatar else None,
+            'is_2fa_enabled': profile.is_2fa_enabled,
+            'last_login': user.last_login,
+            'date_joined': user.date_joined,
+            'organization': {
+                'id': profile.organization.id,
+                'name': profile.organization.name,
+                'org_unique_id': profile.organization.org_unique_id
+            } if profile.organization else None,
+            'role': {
+                'id': profile.role.id,
+                'name': profile.role.name,
+                'level': profile.role.level,
+                'permissions': [p.code for p in profile.get_all_permissions()]
+            } if profile.role else None,
+            'employee': {
+                'id': profile.employee.id,
+                'employee_id': profile.employee.employee_id,
+                'full_name': profile.employee.get_full_name(),
+                'department': profile.employee.department.name if profile.employee.department else None
+            } if profile.employee else None
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Profile retrieval error: {str(e)}")
+        return Response(
+            {'error': 'Failed to retrieve profile'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile_view(request):
+    """
+    Update user profile
+    PUT/PATCH /api/v1/auth/profile/
+    Headers: Authorization: Token xxx
+    Body: {"first_name": "John", "last_name": "Doe", "phone": "+1234567890"}
+    """
+    try:
+        user = request.user
+        profile = user.userprofile
+
+        # Update user fields
+        if 'first_name' in request.data:
+            user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            user.last_name = request.data['last_name']
+        if 'email' in request.data:
+            # Check if email is already taken
+            email = request.data['email']
+            if User.objects.filter(email=email).exclude(id=user.id).exists():
+                return Response(
+                    {'error': 'Email already in use'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            user.email = email
+
+        user.save()
+
+        # Update profile fields
+        if 'phone' in request.data:
+            profile.phone = request.data['phone']
+        if 'avatar' in request.data:
+            profile.avatar = request.data['avatar']
+
+        profile.save()
+
+        logger.info(f"Profile updated: {user.username}")
+
+        return Response({
+            'message': 'Profile updated successfully',
+            'user': profile.to_dict()
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Profile update error: {str(e)}")
+        return Response(
+            {'error': 'Failed to update profile'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password_view(request):
+    """
+    Change user password
+    POST /api/v1/auth/password/change/
+    Headers: Authorization: Token xxx
+    Body: {"old_password": "old", "new_password": "new"}
+    """
+    try:
+        user = request.user
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+
+        if not old_password or not new_password:
+            return Response(
+                {'error': 'Old password and new password required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify old password
+        if not user.check_password(old_password):
+            return Response(
+                {'error': 'Old password is incorrect'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate new password
+        try:
+            validate_password(new_password, user)
+        except ValidationError as e:
+            return Response(
+                {'error': list(e.messages)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Set new password
+        user.set_password(new_password)
+        user.save()
+
+        # Update profile
+        profile = user.userprofile
+        profile.last_password_change = timezone.now()
+        profile.save()
+
+        # Delete old token and create new one
+        Token.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
+
+        logger.info(f"Password changed: {user.username}")
+
+        return Response({
+            'message': 'Password changed successfully',
+            'token': token.key
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Password change error: {str(e)}")
+        return Response(
+            {'error': 'Failed to change password'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_permission_view(request, permission_code):
+    """
+    Check if user has a specific permission
+    GET /api/v1/auth/permissions/check/{permission_code}/
+    Headers: Authorization: Token xxx
+    """
+    try:
+        profile = request.user.userprofile
+        has_permission = profile.has_permission(permission_code)
+
+        return Response({
+            'permission': permission_code,
+            'has_permission': has_permission
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Permission check error: {str(e)}")
+        return Response(
+            {'error': 'Failed to check permission'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -1,9 +1,9 @@
-# Django Core
+# Core Django
 Django==5.0.7
 psycopg2-binary==2.9.9
 python-decouple==3.8
 
-# Django REST Framework
+# REST API
 djangorestframework==3.15.2
 django-cors-headers==4.3.1
 django-filter==24.2
@@ -12,21 +12,20 @@ djangorestframework-simplejwt==5.3.1
 # GraphQL
 graphene-django==3.2.2
 
-# Authentication (Keycloak)
-python-keycloak==4.2.2
+# JWT - NO MORE KEYCLOAK
 PyJWT==2.8.0
-cryptography==42.0.8
+cryptography==43.0.0
 
-# Database Drivers
+# Databases
 neo4j==5.22.0
 redis==5.0.7
 pymongo==4.8.0
 
-# Object Storage (MinIO/S3)
+# Storage
 boto3==1.34.144
 django-storages==1.14.3
 
-# Utilities
+# Background tasks
 celery==5.4.0
 python-dotenv==1.0.1
 requests==2.32.3
@@ -46,13 +45,12 @@ gunicorn==22.0.0
 whitenoise==6.7.0
 sentry-sdk==2.7.1
 
-# Cloud Storage Backends (install as needed)
-google-cloud-storage==2.16.0  # For GCS
-azure-storage-blob==12.19.1   # For Azure
+# Cloud storage
+google-cloud-storage==2.16.0
+azure-storage-blob==12.19.1
 
-# Image processing
-Pillow==10.1.0
+# Image processing - Updated for Python 3.13
+Pillow==10.4.0
 
-
-# Redis cache backend
+# Additional for auth
 django-redis==5.4.0

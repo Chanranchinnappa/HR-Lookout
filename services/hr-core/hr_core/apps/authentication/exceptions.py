@@ -1,39 +1,77 @@
 """
-Custom exception handler for authentication errors
+Custom exceptions for authentication and RBAC
 """
 
-from rest_framework.views import exception_handler as drf_exception_handler
-from rest_framework import status
-from rest_framework.response import Response
+from django.core.exceptions import PermissionDenied
 
 
-def custom_exception_handler(exc, context):
-    """
-    Custom exception handler that returns consistent error responses
-    """
-    # Call DRF's default exception handler first
-    response = drf_exception_handler(exc, context)
-    
-    if response is not None:
-        # Customize the response format
-        custom_response_data = {
-            'error': True,
-            'status_code': response.status_code,
-            'message': _get_error_message(exc, response),
-            'details': response.data if isinstance(response.data, dict) else {'detail': response.data},
-        }
-        response.data = custom_response_data
-    
-    return response
+class AuthenticationException(Exception):
+    """Base exception for authentication errors"""
+    pass
 
 
-def _get_error_message(exc, response):
+class RBACPermissionDenied(PermissionDenied):
     """
-    Extract a user-friendly error message
+    Custom exception for RBAC permission denied
+    Raised when user lacks required permissions
     """
-    if hasattr(exc, 'detail'):
-        if isinstance(exc.detail, dict):
-            return list(exc.detail.values())[0] if exc.detail else 'An error occurred'
-        return str(exc.detail)
-    
-    return 'An error occurred'
+    def __init__(self, permission, message=None):
+        self.permission = permission
+        if message is None:
+            message = f"Permission denied: {permission} required"
+        super().__init__(message)
+
+
+class InvalidRoleException(Exception):
+    """
+    Exception raised when invalid role is specified or assigned
+    """
+    def __init__(self, role, message=None):
+        self.role = role
+        if message is None:
+            message = f"Invalid role: {role}"
+        super().__init__(message)
+
+
+class InsufficientPermissionsException(Exception):
+    """
+    Exception raised when user has insufficient permissions for an action
+    """
+    def __init__(self, required_permissions, message=None):
+        self.required_permissions = required_permissions
+        if message is None:
+            message = f"Insufficient permissions. Required: {', '.join(required_permissions)}"
+        super().__init__(message)
+
+
+class TenantIsolationViolation(PermissionDenied):
+    """
+    Exception raised when user attempts to access data from another organization
+    """
+    def __init__(self, message="Cannot access data from other organizations"):
+        super().__init__(message)
+
+
+class InvalidTokenException(AuthenticationException):
+    """
+    Exception raised when authentication token is invalid or expired
+    """
+    def __init__(self, message="Invalid or expired authentication token"):
+        super().__init__(message)
+
+
+class UserInactiveException(AuthenticationException):
+    """
+    Exception raised when user account is inactive
+    """
+    def __init__(self, message="User account is inactive"):
+        super().__init__(message)
+
+
+class PasswordValidationException(Exception):
+    """
+    Exception raised when password does not meet validation requirements
+    """
+    def __init__(self, errors, message="Password validation failed"):
+        self.errors = errors
+        super().__init__(message)

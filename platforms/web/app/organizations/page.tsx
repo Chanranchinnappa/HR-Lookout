@@ -32,6 +32,7 @@ export default function OrganizationsPage() {
 
   const fetchOrganizations = async () => {
     try {
+      console.log('fetching organizations');
       setLoading(true);
       const response = await organizationsApi.getAll();
       const orgs = response.data.results || response.data || [];
